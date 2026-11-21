@@ -1,7 +1,8 @@
 <!doctype html>
 <!-- Startseite des Narkose-Logbuchs.
      Schritt 2: Reiter "Neuer Fall" mit Formular und Liste; Speichern auf dem Gerät (IndexedDB).
-     Schritt 3: Reiter "Übersicht" mit Fortschritt je Kategorie und Nachträgen; Einstellung im Profil. -->
+     Schritt 3: Reiter "Übersicht" mit Fortschritt je Kategorie und Nachträgen; Einstellung im Profil.
+     Schritt 4: installierbar und offline (Manifest, Symbole, Service Worker, Update-Hinweis). -->
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -10,11 +11,31 @@
   <meta name="color-scheme" content="light dark">
   <title>Narkose-Logbuch</title>
   <link rel="stylesheet" href="style.css">
+
+  <!-- Schritt 4: PWA.
+       Das Manifest ist ein "Steckbrief" der App: Name, Symbol, Farben, wie sie startet.
+       Damit weiß das Handy, wie es die App auf dem Startbildschirm darstellen soll. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <!-- iPhone liest das Manifest nur teilweise und braucht ein eigenes Symbol (180 × 180 px) -->
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Logbuch">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- Farbe der Statusleiste: hell und dunkel passend zum Design -->
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1a2129" media="(prefers-color-scheme: dark)">
 </head>
 <body>
   <header class="top-bar">
     <h1>Narkose-Logbuch</h1>
   </header>
+
+  <!-- Erscheint nur, wenn eine neue Version der App bereitliegt (steuert js/pwa.js) -->
+  <div id="update-banner" class="update-banner" role="status" hidden>
+    <span>Neue Version verfügbar.</span>
+    <button type="button" id="update-button">Neu laden</button>
+  </div>
 
   <main>
     <!-- Jeder Reiter ist ein eigener Abschnitt. Sichtbar ist immer nur einer. -->
@@ -148,6 +169,15 @@
             Aus: Jeder Patient zählt als 1 Verfahren.</span>
         </span>
       </label>
+
+      <h3 class="section-title">App</h3>
+      <div class="info-card">
+        <p><strong>Offline:</strong> <span id="offline-status">Wird eingerichtet …</span></p>
+        <p><strong>Version:</strong> <span id="app-version">–</span></p>
+        <p id="install-hint">Auf den Startbildschirm legen: Android (Chrome) über das Menü ⋮ → „App installieren“.
+          iPhone (Safari) über Teilen □↑ → „Zum Home-Bildschirm“.</p>
+        <button type="button" id="install-button" class="primary" hidden>App installieren</button>
+      </div>
     </section>
   </main>
 
@@ -212,5 +242,7 @@
 
   <!-- type="module": moderne JavaScript-Datei, die andere Dateien (db.js, options.js) laden darf -->
   <script type="module" src="js/app.js"></script>
+  <!-- Offline-Modus, Update-Hinweis und Installieren -->
+  <script type="module" src="js/pwa.js"></script>
 </body>
 </html>
