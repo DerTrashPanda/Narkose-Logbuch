@@ -167,6 +167,7 @@ const BASE_PROCEDURE_FALLBACK = {
 // cells   = Zellen der Zeile, mapping = Ziel je Spalte (aus suggestMapping, ggf. geändert),
 // options = { sectioFromProcedure: true } → Eingriff "Sectio" setzt das Fachgebiet auf "Sectio".
 // Ergebnis: { entry, warnings: [...], skipReason } – skipReason gesetzt = Zeile wird nicht importiert.
+// Steht zusätzlich measures: [...] darin, wird die Zeile als Maßnahme(n) statt als Narkose importiert.
 export function convertRow(cells, mapping, options = {}) {
   const warnings = [];
   const valuesFor = (target) => mapping
@@ -237,15 +238,9 @@ export function convertRow(cells, mapping, options = {}) {
   }
 
   // Verfahren
-  let tokens = valuesFor('procedures');
-  if (!tokens.length) {
-    const base = BASE_PROCEDURE_FALLBACK[first('baseProcedure').toLowerCase()];
-    if (base) {
-      warnings.push(`Verfahren leer – aus „${first('baseProcedure')}“ als ${base.value || 'Sedierung'} angenommen`);
-      applyToken(entry, base, first('baseProcedure'), warnings, []);
-    }
-    tokens = [];
-  }
+  const tokens = valuesFor('procedures');
+  const baseText = first('baseProcedure');
+  const base = BASE_PROCEDURE_FALLBACK[baseText.toLowerCase()];
   const blocks = [];
   const unknown = [];
   tokens.forEach((raw) => {
@@ -278,16 +273,41 @@ export function convertRow(cells, mapping, options = {}) {
     appendNote(entry, `Import: ${unknown.join(', ')}`);
   }
 
-  const hasProcedure = entry.general !== 'keine' || entry.neuraxial !== 'keine'
-    || entry.block1 || entry.sedation;
-  if (!hasProcedure) {
+  // Kein Narkoseverfahren in den "Verfahren"-Spalten? Dann hilft das Grundverfahren weiter.
+  //   - Verfahren ganz leer: Grundverfahren übernehmen (auch Standby/Sedierung).
+  //   - Nur ZVK/Arterie eingetragen (z. B. "Allgemeinanästhesie" + ZVK + Art): Allgemein-
+  //     bzw. Regionalanästhesie übernehmen, aber NICHT Standby – eine ZVK-Anlage mit
+  //     "Standby" wird eine Maßnahme (vom Nutzer so entschieden, 21.11.2026).
+  if (!hasMainProcedure(entry) && base && (!tokens.length || base.kind !== 'sedation')) {
+    warnings.push(`kein Narkoseverfahren in „Verfahren“ – aus „${baseText}“ als ${base.value || 'Sedierung'} angenommen`);
+    applyToken(entry, base, baseText, warnings, []);
+  }
+
+  if (!hasMainProcedure(entry)) {
     if (entry.cvc || entry.arterial) {
-      warnings.push('nur ZVK/Arterie ohne Narkose – zählt nur bei ZVK/Arterie');
-    } else {
-      return { entry, warnings, skipReason: 'kein Verfahren eingetragen' };
+      // Nur ZVK/Arterie ohne Narkose: wird als Maßnahme importiert (Schritt 6), nicht als Narkose.
+      const note = [entry.procedure, entry.note].filter(Boolean).join(' · ');
+      const measures = [];
+      if (entry.cvc) measures.push('ZVK');
+      if (entry.arterial) measures.push('Arterie');
+      warnings.push(`ohne Narkose – wird als Maßnahme ${measures.join(' + ')} übernommen`);
+      return {
+        entry,
+        measures: measures.map((type) => ({
+          date: entry.date, type, simulation: false, ultrasound: false, location: '', note,
+        })),
+        warnings,
+        skipReason: null,
+      };
     }
+    return { entry, warnings, skipReason: 'kein Verfahren eingetragen' };
   }
   return { entry, warnings, skipReason: null };
+}
+
+// Hat der Eintrag ein echtes Narkoseverfahren (Allgemein, rückenmarksnah, Block oder Sedierung)?
+function hasMainProcedure(entry) {
+  return entry.general !== 'keine' || entry.neuraxial !== 'keine' || Boolean(entry.block1) || entry.sedation;
 }
 
 function appendNote(entry, text) {

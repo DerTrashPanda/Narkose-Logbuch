@@ -4,6 +4,7 @@
 
 import {
   listAnesthesias, listSupplements, saveSupplement, deleteSupplement, getSettings, saveSetting,
+  listAllRecords,
 } from './db.js';
 import {
   CATEGORIES, COUNTABLE, computeProgress, categoryLabel,
@@ -88,9 +89,22 @@ function renderProgressItem(category, row) {
   const info = [];
   if (row.fromSupplements) info.push(`davon ${row.fromSupplements} Nachtrag`);
   if (!done) info.push(`noch ${category.target - row.sum}`);
+  if (row.simulation) info.push(`davon ${row.simulation} Simulation`);
   if (category.simLimit) info.push(`höchstens ${category.simLimit} % Simulation`);
+  if (category.simMax !== undefined) info.push(`höchstens ${category.simMax} aus Simulation`);
   if (category.later) info.push(category.later);
   foot.append(el('span', 'hint', info.join(' · ')));
+
+  // Warnungen zur Simulation (z. B. Fiberoptik: mehr als die Hälfte am Phantom)
+  const warnings = [];
+  if (category.simLimit && row.sum && (row.simulation / row.sum) * 100 > category.simLimit) {
+    warnings.push(`Achtung: ${Math.round((row.simulation / row.sum) * 100)} % aus Simulation, `
+      + `erlaubt sind höchstens ${category.simLimit} %.`);
+  }
+  if (row.simIgnored) {
+    warnings.push(`${row.simIgnored} weitere ${row.simIgnored === 1 ? 'Simulation wird' : 'Simulationen werden'} `
+      + 'nicht angerechnet.');
+  }
   const addButton = el('button', 'small-button', '＋ Nachtrag');
   addButton.type = 'button';
   addButton.dataset.category = category.id;
@@ -98,6 +112,7 @@ function renderProgressItem(category, row) {
   foot.append(addButton);
 
   item.append(head, bar, foot);
+  if (warnings.length) item.append(el('p', 'progress-warning', warnings.join(' ')));
   return item;
 }
 
@@ -136,11 +151,11 @@ function renderSupplements(supplements) {
 let currentSupplements = [];
 
 export async function refreshOverview() {
-  const [entries, supplements, settings] = await Promise.all([
-    listAnesthesias(), listSupplements(), getSettings(),
+  const [entries, supplements, settings, records] = await Promise.all([
+    listAnesthesias(), listSupplements(), getSettings(), listAllRecords(),
   ]);
   currentSupplements = supplements;
-  renderProgress(computeProgress(entries, supplements, settings), settings);
+  renderProgress(computeProgress(entries, supplements, settings, records), settings);
   renderSupplements(supplements);
   countSeparatelySwitch.checked = settings.countSeparately;
 }

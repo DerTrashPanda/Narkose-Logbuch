@@ -9,7 +9,7 @@ import {
   TARGETS, suggestMapping, convertAll,
 } from './import-mapping.js';
 import {
-  listAnesthesias, saveImportedAnesthesias, deleteImportedAnesthesias, getSettings, saveSetting,
+  listAnesthesias, listRecords, saveImportedAnesthesias, deleteImportedAnesthesias, getSettings, saveSetting,
 } from './db.js';
 
 const fileInput = document.getElementById('import-file');
@@ -43,7 +43,11 @@ function formatDate(isoDate) {
   return `${d}.${m}.${y}`;
 }
 
-function describe(entry) {
+function describe(entry, measures) {
+  // Zeile wird als Maßnahme übernommen (nur ZVK/Arterie, keine Narkose)
+  if (measures) {
+    return `Maßnahme ${measures.map((m) => m.type).join(' + ')}${entry.procedure ? ` · ${entry.procedure}` : ''}`;
+  }
   const parts = [];
   if (entry.general !== 'keine') parts.push(entry.general);
   if (entry.neuraxial !== 'keine') parts.push(entry.neuraxial);
@@ -125,33 +129,36 @@ async function renderPreview() {
   fileError.hidden = true;
   results = convertAll(rows, mapping, { sectioFromProcedure: sectioOption.checked });
   const toImport = results.filter((r) => !r.skipReason);
+  const anesthesiaCount = toImport.filter((r) => !r.measures).length;
+  const measureCount = toImport.reduce((sum, r) => sum + (r.measures ? r.measures.length : 0), 0);
   const skipped = results.filter((r) => r.skipReason);
   const withWarnings = toImport.filter((r) => r.warnings.length);
 
   const dates = toImport.map((r) => r.entry.date).sort();
   summary.textContent = toImport.length
-    ? `${results.length} Zeilen gelesen. ${toImport.length} Narkosen werden importiert`
+    ? `${results.length} Zeilen gelesen. ${anesthesiaCount} Narkosen`
+      + `${measureCount ? ` und ${measureCount} ${measureCount === 1 ? 'Maßnahme' : 'Maßnahmen'}` : ''} werden importiert`
       + ` (${formatDate(dates[0])} bis ${formatDate(dates[dates.length - 1])}),`
       + ` ${skipped.length} Zeilen übersprungen, ${withWarnings.length} mit Hinweis.`
     : `${results.length} Zeilen gelesen, aber keine davon kann importiert werden.`;
 
   warningCount.textContent = `(${withWarnings.length})`;
-  warningList.replaceChildren(...withWarnings.map((r) => previewItem(r, `${describe(r.entry)} – ${r.warnings.join('; ')}`)));
+  warningList.replaceChildren(...withWarnings.map((r) => previewItem(r, `${describe(r.entry, r.measures)} – ${r.warnings.join('; ')}`)));
   skippedCount.textContent = `(${skipped.length})`;
   skippedList.replaceChildren(...skipped.map((r) => previewItem(r, r.skipReason)));
   allCount.textContent = `(${toImport.length})`;
-  allList.replaceChildren(...toImport.map((r) => previewItem(r, describe(r.entry))));
+  allList.replaceChildren(...toImport.map((r) => previewItem(r, describe(r.entry, r.measures))));
 
   // Schon einmal importiert? Dann warnen, damit nichts doppelt zählt.
-  const existing = await listAnesthesias();
+  const existing = [...await listAnesthesias(), ...await listRecords('measures')];
   const alreadyImported = existing.filter((e) => e.importId).length;
   duplicateWarning.hidden = alreadyImported === 0;
-  duplicateWarning.textContent = `Achtung: Es gibt schon ${alreadyImported} importierte Narkosen. `
+  duplicateWarning.textContent = `Achtung: Es gibt schon ${alreadyImported} importierte Einträge. `
     + 'Wenn das dieselbe Tabelle ist, würden die Fälle doppelt zählen. '
     + 'Mach dann zuerst unten „Letzten Import rückgängig machen“.';
 
   confirmButton.disabled = toImport.length === 0;
-  confirmButton.textContent = `${toImport.length} Narkosen importieren`;
+  confirmButton.textContent = `${toImport.length} Zeilen importieren`;
   previewStep.hidden = false;
 }
 
@@ -206,13 +213,17 @@ cancelButton.addEventListener('click', closeImport);
 // ---------- Schritt 3: importieren ----------
 
 confirmButton.addEventListener('click', async () => {
-  const entries = results.filter((r) => !r.skipReason).map((r) => r.entry);
-  if (!entries.length) return;
+  const usable = results.filter((r) => !r.skipReason);
+  const entries = usable.filter((r) => !r.measures).map((r) => r.entry);
+  const measures = usable.flatMap((r) => r.measures || []);
+  if (!entries.length && !measures.length) return;
   confirmButton.disabled = true;
   const importId = `import-${new Date().toISOString()}`;
   try {
-    await saveImportedAnesthesias(entries, importId);
-    await saveSetting('lastImport', { id: importId, count: entries.length, at: new Date().toISOString() });
+    await saveImportedAnesthesias(entries, importId, measures);
+    await saveSetting('lastImport', {
+      id: importId, count: entries.length, measureCount: measures.length, at: new Date().toISOString(),
+    });
   } catch (e) {
     fileError.textContent = `Import hat nicht geklappt, es wurde nichts gespeichert: ${e.message}`;
     fileError.hidden = false;
@@ -223,7 +234,8 @@ confirmButton.addEventListener('click', async () => {
   // Liste und Übersicht in den anderen Reitern neu laden (app.js hört darauf)
   window.dispatchEvent(new Event('entries-changed'));
   await renderLastImport();
-  showMessage(`${entries.length} Narkosen importiert. Schau in „Neuer Fall“ und „Übersicht“.`);
+  showMessage(`${entries.length} Narkosen${measures.length ? ` und ${measures.length} Maßnahmen` : ''} importiert. `
+    + 'Schau in „Neuer Fall“ und „Übersicht“.');
 });
 
 // ---------- Letzten Import rückgängig machen ----------
@@ -233,7 +245,8 @@ async function renderLastImport() {
   lastImportBox.hidden = !lastImport;
   if (lastImport) {
     const date = formatDate(lastImport.at.slice(0, 10));
-    lastImportText.textContent = `Letzter Import: ${lastImport.count} Narkosen am ${date}.`;
+    const extra = lastImport.measureCount ? ` und ${lastImport.measureCount} Maßnahmen` : '';
+    lastImportText.textContent = `Letzter Import: ${lastImport.count} Narkosen${extra} am ${date}.`;
   }
 }
 
@@ -243,13 +256,14 @@ window.addEventListener('entries-changed', () => { renderLastImport().catch(() =
 undoButton.addEventListener('click', async () => {
   const { lastImport } = await getSettings();
   if (!lastImport) return;
-  if (!confirm(`Alle ${lastImport.count} Narkosen aus dem letzten Import löschen? `
+  const extra = lastImport.measureCount ? ` und ${lastImport.measureCount} Maßnahmen` : '';
+  if (!confirm(`Alle ${lastImport.count} Narkosen${extra} aus dem letzten Import löschen? `
     + 'Selbst eingetragene Fälle bleiben erhalten.')) return;
   const deleted = await deleteImportedAnesthesias(lastImport.id);
   await saveSetting('lastImport', null);
   window.dispatchEvent(new Event('entries-changed'));
   await renderLastImport();
-  showMessage(`${deleted} importierte Narkosen gelöscht.`);
+  showMessage(`${deleted} importierte Einträge gelöscht.`);
 });
 
 function showMessage(message) {

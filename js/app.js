@@ -224,7 +224,8 @@ function readForm() {
 // Prüft, ob der Eintrag sinnvoll ist. Gibt eine Fehlermeldung zurück oder null.
 function validate(entry) {
   if (!entry.date) return 'Bitte ein Datum angeben.';
-  // ZVK/Arterie allein ist auch erlaubt (z. B. importierte Einzelmaßnahmen, bis es Schritt 6 "Maßnahmen" gibt).
+  // ZVK/Arterie allein ist weiter erlaubt, damit ältere Einträge so noch bearbeitet werden können.
+  // Neu besser über "Maßnahme" oben im Reiter erfassen (Schritt 6).
   const hasProcedure = entry.general !== 'keine' || entry.neuraxial !== 'keine'
     || entry.block1 || entry.sedation || entry.cvc || entry.arterial;
   if (!hasProcedure) {

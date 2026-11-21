@@ -50,8 +50,11 @@ export function countProcedures(entry, countSeparately) {
 //   target   – Richtzahl
 //   parent   – "davon"-Kategorie einer anderen (wird eingerückt angezeigt)
 //   count    – Funktion: wie viel zählt eine Narkose hier? (0, 1, 2 …)
-//   later    – Hinweis, falls die Einzelerfassung erst in einem späteren Schritt kommt
-//   simLimit – höchstens so viel Prozent darf aus Simulation stammen (nur Hinweis)
+//   measure  – Funktion: wie viel zählt eine Maßnahme hier? (fehlt = 0)
+//   icu      – Funktion: wie viel zählt ein Intensiv-Fall hier? (fehlt = 0)
+//   emergency – Funktion: wie viel zählt ein Notarzteinsatz hier? (fehlt = 0)
+//   simLimit – höchstens so viel Prozent darf aus Simulation stammen (Hinweis, zählt trotzdem)
+//   simMax   – höchstens so viele Simulationen werden angerechnet (der Rest zählt nicht)
 export const CATEGORIES = [
   { group: 'Anästhesieverfahren' },
   {
@@ -111,52 +114,64 @@ export const CATEGORIES = [
   {
     id: 'fiberoptic', label: 'Fiberoptische Intubation', target: 25, simLimit: 50,
     count: (e) => ((e.airway || []).includes('Fiberoptik') ? 1 : 0),
+    measure: (m) => (m.type === 'Fiberoptische Intubation' ? 1 : 0),
   },
   {
     id: 'video', label: 'Videolaryngoskopie', target: 20,
     count: (e) => ((e.airway || []).includes('Videolaryngoskopie') ? 1 : 0),
+    measure: (m) => (m.type === 'Videolaryngoskopie' ? 1 : 0),
   },
   {
     id: 'ultrasound', label: 'Ultraschallverfahren', target: 50,
     count: (e) => (e.ultrasound ? 1 : 0),
+    // Maßnahme mit Häkchen "mit Ultraschall" (z. B. ZVK unter Sono) oder sono-gesteuerte Punktion
+    measure: (m) => (m.ultrasound || m.type === 'Sono-gesteuerte Punktion' ? 1 : 0),
   },
   {
     id: 'cvc', label: 'ZVK', target: 30,
     count: (e) => (e.cvc ? 1 : 0),
+    measure: (m) => (m.type === 'ZVK' ? 1 : 0),
   },
   {
     id: 'arterial', label: 'Arterie', target: 30,
     count: (e) => (e.arterial ? 1 : 0),
+    measure: (m) => (m.type === 'Arterie' ? 1 : 0),
   },
 
   { group: 'Maßnahmen' },
   {
     id: 'pleura', label: 'Pleurapunktion/-drainage', target: 5,
-    count: () => 0, later: 'Einzelerfassung kommt mit „Maßnahmen“.',
+    count: () => 0,
+    measure: (m) => (m.type === 'Pleurapunktion' || m.type === 'Pleuradrainage' ? 1 : 0),
   },
   {
     id: 'bronchoscopy', label: 'Tracheo-/Bronchoskopien', target: 25,
-    count: () => 0, later: 'Einzelerfassung kommt mit „Maßnahmen“.',
+    count: () => 0,
+    measure: (m) => (m.type === 'Bronchoskopie' || m.type === 'Tracheoskopie' ? 1 : 0),
   },
   {
     id: 'incidentTraining', label: 'Zwischenfalltraining', target: 5,
-    count: () => 0, later: 'Einzelerfassung kommt mit „Maßnahmen“.',
+    count: () => 0,
+    measure: (m) => (m.type === 'Zwischenfalltraining' ? 1 : 0),
   },
 
   { group: 'Intensivmedizin' },
   {
     id: 'icuOrgans', label: 'ITS: ≥ 2 Organsysteme gestört', target: 100,
-    count: () => 0, later: 'Einzelerfassung kommt mit „Intensiv“.',
+    count: () => 0,
+    icu: (i) => (i.organs2 ? 1 : 0),
   },
   {
     id: 'ventilation', label: 'Beatmung/Weaning', target: 50,
-    count: () => 0, later: 'Einzelerfassung kommt mit „Intensiv“.',
+    count: () => 0,
+    icu: (i) => (i.ventilation ? 1 : 0),
   },
 
   { group: 'Zusatz-Weiterbildung Notfallmedizin' },
   {
-    id: 'emergencyPhysician', label: 'Notarzteinsätze', target: 50,
-    count: () => 0, later: 'Einzelerfassung kommt mit „Notarzt“. Höchstens 25 aus Simulation.',
+    id: 'emergencyPhysician', label: 'Notarzteinsätze', target: 50, simMax: 25,
+    count: () => 0,
+    emergency: () => 1,
   },
 ];
 
@@ -167,16 +182,51 @@ export function categoryLabel(id) {
   return COUNTABLE.find((c) => c.id === id)?.label || id;
 }
 
-// Rechnet für jede Kategorie aus: wie viel aus Narkosen, wie viel aus Nachträgen.
-// Ergebnis: { total: { fromEntries: 34, fromSupplements: 5, sum: 39 }, ... }
-export function computeProgress(entries, supplements, settings) {
+// Ist ein Eintrag eine Simulation? (Maßnahme mit Häkchen oder Notarzt-"Einsatz" im Simulationskurs)
+function isSimulation(record) {
+  return Boolean(record.simulation) || record.vehicle === 'Simulation';
+}
+
+// Rechnet für jede Kategorie aus: wie viel aus Einzelfällen, wie viel aus Nachträgen.
+// records = { measures, icu, emergencies } (Schritt 6); fehlt etwas, zählt es als leer.
+// Ergebnis: { total: { fromEntries: 34, fromSupplements: 5, sum: 39, simulation: 0, simIgnored: 0 }, ... }
+//   simulation = davon aus Simulation (angerechnet), simIgnored = Simulationen über der Höchstzahl
+export function computeProgress(entries, supplements, settings, records = {}) {
   const result = {};
   for (const category of COUNTABLE) {
-    result[category.id] = { fromEntries: 0, fromSupplements: 0, sum: 0 };
+    result[category.id] = { fromEntries: 0, fromSupplements: 0, sum: 0, simulation: 0, simIgnored: 0 };
   }
   for (const entry of entries) {
     for (const category of COUNTABLE) {
       result[category.id].fromEntries += category.count(entry, settings);
+    }
+  }
+  // Maßnahmen, Intensiv, Notarzt: jede Kategorie sagt selbst, ob und wie viel sie zählt.
+  const sources = [
+    ['measure', records.measures || []],
+    ['icu', records.icu || []],
+    ['emergency', records.emergencies || []],
+  ];
+  for (const [counterName, list] of sources) {
+    for (const record of list) {
+      for (const category of COUNTABLE) {
+        const counter = category[counterName];
+        const amount = counter ? counter(record) : 0;
+        if (!amount) continue;
+        const row = result[category.id];
+        if (isSimulation(record)) {
+          // Höchstzahl für Simulation (Notarzt: höchstens 25): darüber hinaus zählt es nicht.
+          if (category.simMax !== undefined && row.simulation + amount > category.simMax) {
+            const allowed = Math.max(category.simMax - row.simulation, 0);
+            row.simIgnored += amount - allowed;
+            row.simulation += allowed;
+            row.fromEntries += allowed;
+            continue;
+          }
+          row.simulation += amount;
+        }
+        row.fromEntries += amount;
+      }
     }
   }
   for (const supplement of supplements) {
