@@ -237,6 +237,9 @@ async function renderLastImport() {
   }
 }
 
+// Nach dem Wiederherstellen eines Backups (js/backup.js) kann sich der letzte Import geändert haben.
+window.addEventListener('entries-changed', () => { renderLastImport().catch(() => {}); });
+
 undoButton.addEventListener('click', async () => {
   const { lastImport } = await getSettings();
   if (!lastImport) return;

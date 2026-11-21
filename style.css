@@ -651,6 +651,8 @@ dialog .field-row .field {
 
 .danger-text {
   color: var(--danger);
+}
+
 /* ---------- Schritt 4: Update-Hinweis und App-Infos ---------- */
 
 /* Leiste oben, wenn eine neue Version bereitliegt */
@@ -694,4 +696,62 @@ dialog .field-row .field {
 /* In der installierten App oben Platz für die Statusleiste/Notch lassen */
 .top-bar {
   padding-top: calc(14px + env(safe-area-inset-top));
+}
+
+/* ---------- Schritt 5: Backup und Export ---------- */
+
+.backup-status {
+  margin: 8px 0 12px;
+}
+
+/* Erinnerung, wenn das letzte Backup zu lange her ist */
+.backup-status.warning {
+  padding: 10px 12px;
+  border-left: 4px solid var(--danger);
+  border-radius: 8px;
+  background: var(--surface);
+  font-weight: 600;
+}
+
+/* "Backup wiederherstellen" ist seltener: heller Knopf statt farbig */
+.file-button.secondary-file {
+  margin-top: 10px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+
+.file-ready {
+  margin-top: 12px;
+}
+
+#restore-step {
+  margin-top: 12px;
+}
+
+#restore-step .setting {
+  margin-bottom: 8px;
+}
+
+#restore-step .dialog-actions {
+  margin: 12px 0;
+}
+
+.export-custom {
+  margin-top: 12px;
+}
+
+/* .field-row hat display:flex – das würde "hidden" überstimmen */
+.export-custom[hidden] {
+  display: none;
+}
+
+.export-buttons {
+  display: grid;
+  gap: 8px;
+}
+
+.export-buttons .secondary {
+  width: 100%;
+  min-height: 48px;
 }

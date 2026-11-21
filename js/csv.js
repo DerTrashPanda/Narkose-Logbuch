@@ -73,3 +73,23 @@ export function parseCsv(text, delimiter = detectDelimiter(text)) {
   // ganz leere Zeilen weglassen (Excel hängt oft ";;;;;" an)
   return rows.filter((r) => r.some((value) => value.trim() !== ''));
 }
+
+// ---------- Schreiben (Schritt 5: Export) ----------
+
+// Macht aus einer Zelle sicheren CSV-Text.
+function csvCell(value) {
+  let text = value === null || value === undefined ? '' : String(value);
+  // Schutz: Beginnt eine Zelle mit = + - oder @, würde Excel sie als Formel ausführen.
+  // Ein vorangestelltes ' sorgt dafür, dass Excel sie als normalen Text zeigt.
+  if (/^[=+\-@]/.test(text)) text = `'${text}`;
+  // Enthält die Zelle ; " oder einen Zeilenumbruch, muss sie in Anführungszeichen stehen.
+  if (/[;"\r\n]/.test(text)) text = `"${text.replace(/"/g, '""')}"`;
+  return text;
+}
+
+// Baut aus Zeilen (Listen von Zellen) eine CSV-Datei für deutsches Excel:
+// Trennzeichen ";", Zeilenende wie bei Windows, und das BOM-Zeichen am Anfang,
+// an dem Excel erkennt, dass die Datei UTF-8 ist (sonst wären Umlaute kaputt).
+export function toCsv(rows) {
+  return `﻿${rows.map((row) => row.map(csvCell).join(';')).join('\r\n')}\r\n`;
+}
