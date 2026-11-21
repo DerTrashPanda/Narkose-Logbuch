@@ -150,6 +150,43 @@ export async function deleteImportedAnesthesias(importId) {
   return matching.length;
 }
 
+// ---------- Backup (Schritt 5) ----------
+
+// Holt ALLES aus der Datenbank: Narkosen, Nachträge und Einstellungen (als Liste { key, value }).
+export async function readAllData() {
+  const db = await openDatabase();
+  const tx = db.transaction([STORE_ANESTHESIAS, STORE_SUPPLEMENTS, STORE_SETTINGS], 'readonly');
+  const [anesthesias, supplements, settings] = await Promise.all([
+    asPromise(tx.objectStore(STORE_ANESTHESIAS).getAll()),
+    asPromise(tx.objectStore(STORE_SUPPLEMENTS).getAll()),
+    asPromise(tx.objectStore(STORE_SETTINGS).getAll()),
+  ]);
+  return { anesthesias, supplements, settings };
+}
+
+// Schreibt Daten aus einem Backup zurück – alles in EINER Transaktion über alle drei Bereiche:
+// Klappt etwas nicht, bleibt der alte Stand komplett erhalten.
+//   replace = true:  vorher alles löschen (Gerät bekommt genau den Stand des Backups)
+//   replace = false: nur die übergebenen Einträge hinzufügen (die Auswahl trifft backup.js)
+export async function writeBackupData({ anesthesias, supplements, settings }, replace) {
+  const db = await openDatabase();
+  const tx = db.transaction([STORE_ANESTHESIAS, STORE_SUPPLEMENTS, STORE_SETTINGS], 'readwrite');
+  const stores = {
+    anesthesias: tx.objectStore(STORE_ANESTHESIAS),
+    supplements: tx.objectStore(STORE_SUPPLEMENTS),
+    settings: tx.objectStore(STORE_SETTINGS),
+  };
+  if (replace) Object.values(stores).forEach((store) => store.clear());
+  anesthesias.forEach((record) => stores.anesthesias.put(record));
+  supplements.forEach((record) => stores.supplements.put(record));
+  settings.forEach((row) => stores.settings.put(row));
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
 // ---------- Nachträge ----------
 
 // Speichert einen Nachtrag: { category, amount, from, to, source, note }
@@ -217,4 +254,17 @@ export async function requestPersistentStorage() {
     }
   }
   return false;
+}
+
+// Fragt nur nach (ohne zu bitten): Ist der Speicherschutz schon aktiv?
+// Ergebnis: true, false oder null (Browser kennt die Funktion nicht).
+export async function isStoragePersisted() {
+  if (navigator.storage && navigator.storage.persisted) {
+    try {
+      return await navigator.storage.persisted();
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }

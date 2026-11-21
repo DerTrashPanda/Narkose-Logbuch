@@ -3,7 +3,7 @@
      Schritt 2: Reiter "Neuer Fall" mit Formular und Liste; Speichern auf dem Gerät (IndexedDB).
      Schritt 3: Reiter "Übersicht" mit Fortschritt je Kategorie und Nachträgen; Einstellung im Profil.
      Schritt 4: installierbar und offline (Manifest, Symbole, Service Worker, Update-Hinweis).
-     Schritt 5 (Teil): Import der alten Excel-Tabelle als CSV im Reiter "Export". -->
+     Schritt 5: Import der alten Excel-Tabelle (CSV), Backup/Wiederherstellen und Export als CSV im Reiter "Export". -->
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -156,7 +156,78 @@
 
     <section id="tab-export" class="tab-panel" hidden>
       <h2>Export</h2>
-      <p>Hier kannst du bald deine Daten als Tabelle oder Backup speichern.</p>
+
+      <!-- Schritt 5: Vollbackup. Die Logik steht in js/backup.js. -->
+      <h3 class="section-title">Backup</h3>
+      <p class="hint">Sichert <strong>alles</strong> (Narkosen, Nachträge, Einstellungen) in eine Datei.
+        Am Handy öffnet sich das Teilen-Menü: iPhone „In Dateien sichern“, Android z. B. Google Drive.
+        Am PC landet die Datei im Download-Ordner.</p>
+      <p id="backup-status" class="backup-status"></p>
+      <button type="button" id="backup-create" class="primary">Backup erstellen</button>
+
+      <!-- Erscheint nur, wenn das Teilen-Menü nicht direkt aufgehen durfte (steuert js/share.js) -->
+      <div id="file-ready" class="info-card file-ready" hidden>
+        <p><strong>Datei ist fertig:</strong> <span id="file-ready-name"></span></p>
+        <div class="dialog-actions">
+          <button type="button" id="file-ready-share" class="primary">Teilen / Sichern</button>
+          <button type="button" id="file-ready-download" class="secondary">Herunterladen</button>
+        </div>
+        <button type="button" id="file-ready-close" class="link-button">Schließen</button>
+      </div>
+
+      <label class="file-button secondary-file">
+        Backup wiederherstellen …
+        <input type="file" id="restore-file" accept=".json,application/json,text/plain">
+      </label>
+      <p id="restore-error" class="error" role="alert" hidden></p>
+
+      <div id="restore-step" hidden>
+        <p id="restore-summary"></p>
+        <label class="setting">
+          <input type="radio" name="restore-mode" value="merge" checked>
+          <span>
+            <strong>Zusammenführen (empfohlen)</strong>
+            <span class="hint" id="restore-merge-text"></span>
+          </span>
+        </label>
+        <label class="setting">
+          <input type="radio" name="restore-mode" value="replace">
+          <span>
+            <strong>Alles ersetzen</strong>
+            <span class="hint" id="restore-replace-text"></span>
+          </span>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" id="restore-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="restore-confirm" class="primary">Wiederherstellen</button>
+        </div>
+      </div>
+
+      <!-- Schritt 5: Tabelle für Excel. Die Logik steht in js/export.js. -->
+      <h3 class="section-title">Tabelle exportieren (CSV)</h3>
+      <p class="hint">Öffnet sich in Excel. Gut für den Monatsabschluss und zum Übertragen ins eLogbuch.</p>
+      <div class="chips" id="export-range">
+        <label class="chip"><input type="radio" name="export-range" value="thisMonth" checked><span>Dieser Monat</span></label>
+        <label class="chip"><input type="radio" name="export-range" value="lastMonth"><span>Letzter Monat</span></label>
+        <label class="chip"><input type="radio" name="export-range" value="all"><span>Alles</span></label>
+        <label class="chip"><input type="radio" name="export-range" value="custom"><span>Zeitraum …</span></label>
+      </div>
+      <div id="export-custom" class="field-row export-custom" hidden>
+        <label class="field">
+          <span class="field-label">von</span>
+          <input type="date" id="export-from">
+        </label>
+        <label class="field">
+          <span class="field-label">bis</span>
+          <input type="date" id="export-to">
+        </label>
+      </div>
+      <p id="export-range-info" class="hint"></p>
+      <div class="export-buttons">
+        <button type="button" id="export-anesthesias" class="primary">Narkosen (Einzelfälle)</button>
+        <button type="button" id="export-summary" class="secondary">Zusammenfassung je Kategorie</button>
+        <button type="button" id="export-supplements" class="secondary">Alle Nachträge</button>
+      </div>
 
       <!-- Schritt 5: alte Excel-Tabelle übernehmen. Die Logik steht in js/import.js. -->
       <h3 class="section-title">Alte Tabelle importieren</h3>
@@ -229,6 +300,7 @@
       <div class="info-card">
         <p><strong>Offline:</strong> <span id="offline-status">Wird eingerichtet …</span></p>
         <p><strong>Version:</strong> <span id="app-version">–</span></p>
+        <p><strong>Speicherschutz:</strong> <span id="storage-status">wird geprüft …</span></p>
         <p id="install-hint">Auf den Startbildschirm legen: Android (Chrome) über das Menü ⋮ → „App installieren“.
           iPhone (Safari) über Teilen □↑ → „Zum Home-Bildschirm“.</p>
         <button type="button" id="install-button" class="primary" hidden>App installieren</button>
@@ -298,6 +370,9 @@
   <!-- type="module": moderne JavaScript-Datei, die andere Dateien (db.js, options.js) laden darf -->
   <script type="module" src="js/app.js"></script>
   <script type="module" src="js/import.js"></script>
+  <!-- Backup, Wiederherstellen und Export als Tabelle -->
+  <script type="module" src="js/backup.js"></script>
+  <script type="module" src="js/export.js"></script>
   <!-- Offline-Modus, Update-Hinweis und Installieren -->
   <script type="module" src="js/pwa.js"></script>
 </body>

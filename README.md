@@ -9,3 +9,7 @@ Damit eine Änderung bei dir ankommt:
 1. In `sw.js` die Zahl bei `const VERSION = '…'` erhöhen (z. B. 4.0.0 → 4.0.1).
 2. Kommt eine neue Datei dazu, sie in `APP_FILES` in `sw.js` eintragen.
 3. Nach dem Mergen erscheint in der App oben „Neue Version verfügbar – Neu laden“.
+
+## Daten sichern
+Alle Daten liegen nur auf dem Gerät. Im Reiter **Export → Backup erstellen** regelmäßig eine Backup-Datei (.json) sichern,
+z. B. in iCloud Drive oder Google Drive. Über **Backup wiederherstellen** kommt alles zurück, auch auf einem neuen Handy.
