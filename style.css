@@ -170,6 +170,7 @@ legend small,
 
 input[type="date"],
 input[type="text"],
+input[type="search"],
 textarea {
   width: 100%;
   min-height: 44px;
@@ -780,4 +781,88 @@ dialog .field-row .field {
   color: var(--danger);
   font-size: 13px;
   font-weight: 600;
+}
+
+/* ---------- Schritt 7: Reiter "Fälle" ---------- */
+
+/* "hidden" soll hier immer gewinnen, auch gegen display: flex/block weiter oben */
+#tab-cases [hidden] {
+  display: none !important;
+}
+
+/* Aufklappbarer Filter-Bereich */
+.filter-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 12px;
+  margin-bottom: 12px;
+}
+
+.filter-box summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+/* Ohne das wären Fieldset und Datumsfelder auf schmalen Handys breiter als der Bildschirm */
+.filter-box fieldset,
+.filter-box input[type="date"] {
+  min-width: 0;
+}
+
+/* kleiner Pfeil rechts: zeigt nach unten (zu) bzw. oben (offen) */
+.filter-box summary::after {
+  content: "▾";
+  margin-left: auto;
+}
+
+.filter-box[open] summary::after {
+  content: "▴";
+}
+
+.filter-box[open] {
+  padding-bottom: 4px;
+}
+
+.cases-result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cases-result-row p {
+  margin: 0;
+}
+
+/* Monats-Überschrift in der Liste, z. B. "November 2026 (23)" */
+.month-title {
+  font-size: 15px;
+  color: var(--muted);
+  margin: 18px 0 8px;
+}
+
+/* Die Art eines Eintrags als farbiges Schildchen */
+.kind-tag {
+  font-weight: 600;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.more-button {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Fünf Reiter: auf schmalen Handys Schrift etwas kleiner, damit "Übersicht" passt */
+@media (max-width: 380px) {
+  .tab-bar button {
+    font-size: 12px;
+    padding: 0 2px;
+    white-space: nowrap;
+  }
 }
