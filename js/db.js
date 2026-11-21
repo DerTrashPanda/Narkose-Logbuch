@@ -10,9 +10,11 @@ const DB_NAME = 'narkose-logbuch';
 // Wenn sich später der Aufbau ändert (z. B. neuer Speicherbereich für Maßnahmen),
 // erhöhen wir diese Zahl und ergänzen unten in upgradeDatabase() einen neuen Schritt.
 // Alte Einträge bleiben dabei erhalten.
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 const STORE_ANESTHESIAS = 'anesthesias';
+const STORE_SUPPLEMENTS = 'supplements'; // Nachträge (Sammelzahlen ohne Einzelfall)
+const STORE_SETTINGS = 'settings';       // Einstellungen, je Eintrag { key, value }
 
 let dbPromise = null;
 
@@ -42,8 +44,13 @@ function upgradeDatabase(db, oldVersion) {
     // Ein "Index" ist wie ein Register im Buch: schnelles Sortieren/Suchen nach Datum.
     store.createIndex('by_date', 'date');
   }
+  if (oldVersion < 2) {
+    // Version 2 (Schritt 3): Nachträge und Einstellungen. Die Narkosen bleiben unverändert.
+    db.createObjectStore(STORE_SUPPLEMENTS, { keyPath: 'id' });
+    db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+  }
   // Später z. B.:
-  // if (oldVersion < 2) { db.createObjectStore('measures', { keyPath: 'id' }); }
+  // if (oldVersion < 3) { db.createObjectStore('measures', { keyPath: 'id' }); }
 }
 
 // Hilfsfunktion: macht aus einer IndexedDB-Anfrage ein Promise (einfacher zu benutzen).
@@ -98,6 +105,62 @@ export async function deleteAnesthesia(id) {
   const db = await openDatabase();
   const tx = db.transaction(STORE_ANESTHESIAS, 'readwrite');
   await asPromise(tx.objectStore(STORE_ANESTHESIAS).delete(id));
+}
+
+// ---------- Nachträge ----------
+
+// Speichert einen Nachtrag: { category, amount, from, to, source, note }
+export async function saveSupplement(supplement) {
+  const db = await openDatabase();
+  const now = new Date().toISOString();
+  const record = {
+    ...supplement,
+    id: supplement.id || createId(),
+    schemaVersion: SCHEMA_VERSION,
+    createdAt: supplement.createdAt || now,
+    updatedAt: now,
+  };
+  const tx = db.transaction(STORE_SUPPLEMENTS, 'readwrite');
+  await asPromise(tx.objectStore(STORE_SUPPLEMENTS).put(record));
+  return record;
+}
+
+// Alle Nachträge, neueste zuerst.
+export async function listSupplements() {
+  const db = await openDatabase();
+  const tx = db.transaction(STORE_SUPPLEMENTS, 'readonly');
+  const all = await asPromise(tx.objectStore(STORE_SUPPLEMENTS).getAll());
+  return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function deleteSupplement(id) {
+  const db = await openDatabase();
+  const tx = db.transaction(STORE_SUPPLEMENTS, 'readwrite');
+  await asPromise(tx.objectStore(STORE_SUPPLEMENTS).delete(id));
+}
+
+// ---------- Einstellungen ----------
+
+// Standardwerte, solange man nichts geändert hat.
+export const DEFAULT_SETTINGS = {
+  // Allgemeinanästhesie + Regionalverfahren beim selben Patienten = 2 Verfahren (vom Nutzer entschieden)
+  countSeparately: true,
+};
+
+// Holt alle Einstellungen als ein Objekt, z. B. { countSeparately: true }.
+export async function getSettings() {
+  const db = await openDatabase();
+  const tx = db.transaction(STORE_SETTINGS, 'readonly');
+  const rows = await asPromise(tx.objectStore(STORE_SETTINGS).getAll());
+  const settings = { ...DEFAULT_SETTINGS };
+  rows.forEach((row) => { settings[row.key] = row.value; });
+  return settings;
+}
+
+export async function saveSetting(key, value) {
+  const db = await openDatabase();
+  const tx = db.transaction(STORE_SETTINGS, 'readwrite');
+  await asPromise(tx.objectStore(STORE_SETTINGS).put({ key, value }));
 }
 
 // Bittet den Browser, unsere Daten nicht automatisch zu löschen, wenn der Speicher knapp wird.

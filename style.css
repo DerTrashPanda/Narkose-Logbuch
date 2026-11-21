@@ -11,6 +11,7 @@
   --chip-on-bg: #0f6e7a;
   --chip-on-text: #ffffff;
   --danger: #b3261e;
+  --ok: #2e7d32;
 }
 
 /* Dunkelmodus: greift automatisch, wenn das Handy auf "dunkel" steht (Nachtdienst) */
@@ -25,6 +26,7 @@
     --chip-on-bg: #5cc3cf;
     --chip-on-text: #0b1217;
     --danger: #f2b8b5;
+    --ok: #81c784;
   }
 }
 
@@ -381,4 +383,172 @@ p.error {
 
 .toast[hidden] {
   display: none;
+}
+
+/* ---------- Schritt 3: Übersicht mit Fortschrittsbalken ---------- */
+
+.section-title {
+  font-size: 15px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 22px 0 8px;
+}
+
+.progress-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.progress-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+/* "davon"-Kategorien eingerückt unter ihrer Hauptkategorie */
+.progress-item.sub {
+  margin-left: 20px;
+}
+
+.progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.progress-numbers {
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.progress-numbers strong {
+  color: var(--text);
+  font-size: 19px;
+}
+
+.done .progress-numbers {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+/* Der Balken: grauer Hintergrund, darin die farbigen Teile nebeneinander */
+.bar {
+  display: flex;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--border);
+  overflow: hidden;
+  margin: 6px 0;
+}
+
+.bar-fill {
+  background: var(--accent);
+}
+
+/* Nachträge: gleiche Farbe, aber heller */
+.bar-fill.supplement {
+  background: var(--accent);
+  opacity: 0.45;
+}
+
+.done .bar-fill {
+  background: var(--ok);
+}
+
+.progress-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-foot .hint {
+  margin: 0;
+}
+
+.small-button,
+.secondary {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 15px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* ---------- Nachtrag-Fenster ---------- */
+
+dialog {
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 16px;
+}
+
+/* Abgedunkelter Hintergrund hinter dem Fenster */
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+dialog h2 {
+  margin-top: 0;
+}
+
+select,
+input[type="number"] {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dialog-actions .primary {
+  flex: 1;
+}
+
+/* ---------- Profil: Einstellungen ---------- */
+
+.setting {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.setting input {
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+
+/* Zwei Datumsfelder nebeneinander dürfen schmaler werden, sonst ragen sie aus dem Fenster */
+dialog .field-row .field {
+  min-width: 0;
 }

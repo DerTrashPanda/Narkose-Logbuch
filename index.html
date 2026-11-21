@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- Startseite des Narkose-Logbuchs.
-     Schritt 2: Reiter "Neuer Fall" mit Formular und Liste; Speichern auf dem Gerät (IndexedDB). -->
+     Schritt 2: Reiter "Neuer Fall" mit Formular und Liste; Speichern auf dem Gerät (IndexedDB).
+     Schritt 3: Reiter "Übersicht" mit Fortschritt je Kategorie und Nachträgen; Einstellung im Profil. -->
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -116,8 +117,19 @@
     </section>
 
     <section id="tab-overview" class="tab-panel" hidden>
-      <h2>Übersicht</h2>
-      <p>Hier siehst du bald deinen Stand gegen die Richtzahlen der Weiterbildung.</p>
+      <div class="form-head">
+        <h2>Übersicht</h2>
+        <button type="button" id="add-supplement" class="link-button">＋ Nachtrag</button>
+      </div>
+      <p class="hint">Ist-Stand gegen die Richtzahl. Der hellere Teil des Balkens sind Nachträge.
+        Richtzahlen aus dem eLogbuch (WBO Baden-Württemberg 2022), für Rheinland-Pfalz noch ungeprüft.</p>
+      <p id="count-rule" class="hint"></p>
+      <!-- Die Kategorien mit Balken füllt js/overview.js ein -->
+      <div id="progress-list"></div>
+
+      <h2 class="list-title">Nachträge <span id="supplement-count" class="count"></span></h2>
+      <p id="empty-supplements" class="muted">Noch keine Nachträge. Nachträge sind Sammelzahlen für ältere Fälle, die nicht einzeln eingetragen sind.</p>
+      <ul id="supplement-list" class="entry-list"></ul>
     </section>
 
     <section id="tab-export" class="tab-panel" hidden>
@@ -127,7 +139,15 @@
 
     <section id="tab-profile" class="tab-panel" hidden>
       <h2>Profil</h2>
-      <p>Hier stehen bald deine Einstellungen und Richtzahlen.</p>
+      <h3 class="section-title">Einstellungen</h3>
+      <label class="setting">
+        <input type="checkbox" id="setting-count-separately">
+        <span>
+          <strong>Verfahren einzeln zählen</strong>
+          <span class="hint">An: Jedes Verfahren zählt bei „Anästhesieverfahren gesamt“ einzeln, z. B. ITN + PDK = 2.
+            Aus: Jeder Patient zählt als 1 Verfahren.</span>
+        </span>
+      </label>
     </section>
   </main>
 
@@ -146,6 +166,46 @@
       <span class="tab-icon" aria-hidden="true">●</span>Profil
     </button>
   </nav>
+
+  <!-- Fenster für einen Nachtrag. <dialog> ist ein eingebautes Pop-up-Fenster des Browsers. -->
+  <dialog id="supplement-dialog">
+    <form id="supplement-form" method="dialog" novalidate>
+      <h2>Nachtrag</h2>
+      <p class="hint">Für ältere Fälle, die nicht einzeln eingetragen sind. Zählt nur in der gewählten Kategorie.</p>
+      <label class="field">
+        <span class="field-label">Kategorie</span>
+        <select name="category" required></select>
+      </label>
+      <label class="field">
+        <span class="field-label">Anzahl</span>
+        <input type="number" name="amount" min="1" step="1" inputmode="numeric" required>
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">Zeitraum von <small>(optional)</small></span>
+          <input type="date" name="from">
+        </label>
+        <label class="field">
+          <span class="field-label">bis <small>(optional)</small></span>
+          <input type="date" name="to">
+        </label>
+      </div>
+      <fieldset>
+        <legend>Quelle</legend>
+        <div class="chips" id="supplement-sources"></div>
+      </fieldset>
+      <label class="field">
+        <span class="field-label">Notiz <small>(optional)</small></span>
+        <input type="text" name="note" autocomplete="off">
+        <span class="hint">Keine identifizierenden Angaben.</span>
+      </label>
+      <p id="supplement-error" class="error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" id="supplement-cancel" class="secondary">Abbrechen</button>
+        <button type="submit" class="primary">Nachtrag speichern</button>
+      </div>
+    </form>
+  </dialog>
 
   <!-- Hinweis, falls gerade gespeichert wurde -->
   <div id="toast" class="toast" role="status" hidden></div>
