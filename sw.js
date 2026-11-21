@@ -8,7 +8,7 @@
 // Bei JEDER Änderung an einer App-Datei die Versionsnummer unten erhöhen.
 // Nur dann merkt der Browser, dass es eine neue Version gibt, und lädt alles neu.
 
-const VERSION = '7.0.1';
+const VERSION = '7.1.0';
 const CACHE_NAME = `narkose-logbuch-${VERSION}`;
 
 // Alle Dateien, die die App zum Laufen braucht. Pfade relativ zu sw.js,

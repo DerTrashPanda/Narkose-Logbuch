@@ -105,7 +105,7 @@ function anesthesiaRows(entries, settings) {
   const header = [
     'Datum', 'Allgemeinanästhesie', 'Rückenmarksnah', 'Block 1', 'Block 2', 'Sedierung/Standby',
     'Videolaryngoskopie', 'Fiberoptik', 'Sono', 'ZVK', 'Arterie',
-    'Fachgebiet', 'ASA', 'ambulant/stationär', 'Kind < 5 J.', 'Notfall', 'Ort', 'Eingriff', 'Notiz',
+    'Fachgebiet', 'Organtransplantation', 'ASA', 'ambulant/stationär', 'Kind < 5 J.', 'Notfall', 'Ort', 'Eingriff', 'Notiz',
     'Zählt als Verfahren',
   ];
   const rows = entries.map((e) => {
@@ -117,7 +117,7 @@ function anesthesiaRows(entries, settings) {
       e.block1, e.block2, yes(e.sedation),
       yes(airway.includes('Videolaryngoskopie')), yes(airway.includes('Fiberoptik')),
       yes(e.ultrasound), yes(e.cvc), yes(e.arterial),
-      e.specialty, e.asa || '', e.setting, yes(e.childUnder5), yes(e.emergency),
+      e.specialty, yes(e.transplant), e.asa || '', e.setting, yes(e.childUnder5), yes(e.emergency),
       e.location, e.procedure, e.note,
       countProcedures(e, settings.countSeparately),
     ];

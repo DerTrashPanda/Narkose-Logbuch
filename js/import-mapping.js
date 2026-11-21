@@ -194,6 +194,7 @@ export function convertRow(cells, mapping, options = {}) {
     cvc: false,
     arterial: false,
     childUnder5: false,
+    transplant: false,
   };
 
   // Datum

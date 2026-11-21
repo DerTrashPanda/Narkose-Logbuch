@@ -5,7 +5,8 @@
 //
 // Richtzahlen: geprüft am 21.11.2026 gegen die "Richtlinien über den Inhalt der Weiterbildung"
 // der LÄK Rheinland-Pfalz (3. Änderung vom 06.11.2024), Facharzt Anästhesiologie, S. 19–23.
-// Alle Zahlen stimmen mit dem eLogbuch-Export vom 19.11.2026 überein.
+// Alle alten Zahlen stimmen mit dem eLogbuch-Export vom 19.11.2026 überein;
+// neu aus der RLP-Richtlinie: Organtransplantationen, Farbduplex Leber/Niere, POC-Gerinnung.
 // Notarzteinsätze (50, davon bis zu 25 Simulation): WBO RLP, Zusatz-Weiterbildung Notfallmedizin.
 
 // Der Kaudalblock zählt als rückenmarksnah, auch wenn er als "Block" (Abkürzung KB) eingetragen wurde.
@@ -86,6 +87,11 @@ export const CATEGORIES = [
     count: (e) => (e.specialty === 'Kopf-Hals' ? 1 : 0),
   },
   {
+    // Neu nach Richtlinie LÄK RLP: "Anästhesieverfahren bei Organtransplantationen" (20)
+    id: 'transplant', label: 'Organtransplantationen', target: 20,
+    count: (e) => (e.transplant ? 1 : 0),
+  },
+  {
     id: 'children', label: 'Kinder < 5 Jahre', target: 50,
     count: (e) => (e.childUnder5 ? 1 : 0),
   },
@@ -155,6 +161,18 @@ export const CATEGORIES = [
     id: 'incidentTraining', label: 'Zwischenfalltraining', target: 5,
     count: () => 0,
     measure: (m) => (m.type === 'Zwischenfalltraining' ? 1 : 0),
+  },
+  {
+    // Neu nach Richtlinie LÄK RLP: "Farbkodierte Duplexsonographie Leber oder Niere" (25)
+    id: 'duplex', label: 'Farbduplex Leber/Niere', target: 25,
+    count: () => 0,
+    measure: (m) => (m.type === 'Farbduplex Leber/Niere' ? 1 : 0),
+  },
+  {
+    // Neu nach Richtlinie LÄK RLP: "Gerinnungsdiagnostik mittels POC (viskoelastische Testmethoden)" (50)
+    id: 'pocCoagulation', label: 'POC-Gerinnungsdiagnostik', target: 50,
+    count: () => 0,
+    measure: (m) => (m.type === 'POC-Gerinnung' ? 1 : 0),
   },
 
   { group: 'Intensivmedizin' },
