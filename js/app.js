@@ -8,6 +8,7 @@ import {
   SPECIALTIES, ASA_CLASSES, GENERAL_ANESTHESIA, NEURAXIAL, BLOCKS,
   AIRWAY_TECHNIQUES, LOCATIONS, MAX_BLOCKS,
 } from './options.js';
+import { refreshOverview } from './overview.js';
 
 // ---------- Reiter (wie in Schritt 1) ----------
 
@@ -24,6 +25,8 @@ tabButtons.forEach((button) => {
       if (other === button) other.setAttribute('aria-current', 'page');
       else other.removeAttribute('aria-current');
     });
+    // Übersicht beim Öffnen neu berechnen, damit neue Fälle sofort mitzählen.
+    if (targetId === 'tab-overview') refreshOverview();
   });
 });
 
@@ -452,6 +455,8 @@ entryList.addEventListener('click', async (event) => {
 // ---------- Start ----------
 
 renderToggles();
+// Übersicht und Einstellungen einmal am Anfang laden (auch für den Schalter im Profil).
+refreshOverview().catch(() => {});
 refresh().catch((e) => {
   formError.textContent = `Die Datenbank konnte nicht geöffnet werden: ${e.message}`;
   formError.hidden = false;
