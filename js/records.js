@@ -4,10 +4,11 @@
 //   Narkose (macht weiter app.js) · Maßnahme · Intensiv · Notarzt (macht diese Datei).
 // Die drei Formulare hier funktionieren alle gleich. Was sie unterscheidet,
 // steht unten in KINDS – eine Art "Bauanleitung" pro Formular.
+// Die Liste der bisherigen Einträge steht seit Schritt 7 im Reiter "Fälle" (js/cases.js).
 // Das Speichern selbst erledigt db.js.
 
 import {
-  saveRecord, getRecord, listRecords, deleteRecord, requestPersistentStorage,
+  saveRecord, getRecord, listRecords, requestPersistentStorage,
 } from './db.js';
 import {
   MEASURE_TYPES, MEASURE_TYPES_WITH_ULTRASOUND, MEASURE_LOCATIONS, EMERGENCY_VEHICLES,
@@ -21,7 +22,6 @@ import { refreshOverview } from './overview.js';
 //   texts   – Textfelder im Formular (name-Attribute)
 //   keep    – diese Werte bleiben nach dem Speichern stehen (praktisch für mehrere Einträge am Stück)
 //   validate – gibt eine Fehlermeldung zurück oder null
-//   title / details / tags – wie der Eintrag in der Liste aussieht
 const KINDS = {
   measures: {
     singular: 'Maßnahme',
@@ -35,9 +35,6 @@ const KINDS = {
     texts: ['note'],
     keep: ['date', 'location'],
     validate: (r) => (r.type ? null : 'Bitte antippen, welche Maßnahme es war.'),
-    title: (r) => r.type,
-    details: (r) => [r.location],
-    tags: (r) => [r.simulation && 'Simulation', r.ultrasound && 'Ultraschall', r.importId && 'aus Import'],
   },
   icu: {
     singular: 'Intensiv-Fall',
@@ -50,9 +47,6 @@ const KINDS = {
     validate: (r) => (r.organs2 || r.ventilation
       ? null
       : 'Bitte mindestens eines antippen: „≥ 2 Organsysteme gestört“ oder „Beatmung/Weaning“. Sonst zählt der Fall nirgends.'),
-    title: (r) => [r.organs2 && '≥ 2 Organsysteme', r.ventilation && 'Beatmung/Weaning'].filter(Boolean).join(' + '),
-    details: () => [],
-    tags: () => [],
   },
   emergencies: {
     singular: 'Notarzteinsatz',
@@ -65,9 +59,6 @@ const KINDS = {
     texts: ['keyword', 'supervisor', 'note'],
     keep: ['date', 'vehicle', 'supervisor'],
     validate: () => null,
-    title: (r) => [r.vehicle, r.keyword].filter(Boolean).join(' · '),
-    details: (r) => [r.supervisor && `unter Anleitung: ${r.supervisor}`],
-    tags: () => [],
   },
 };
 
@@ -77,11 +68,6 @@ function todayString() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function formatDate(isoDate) {
-  const [y, m, d] = isoDate.split('-');
-  return `${d}.${m}.${y}`;
 }
 
 function showToast(message) {
@@ -120,7 +106,7 @@ function mergeOptions(defaults, usedValues) {
 
 // ---------- Ein Formular samt Liste ----------
 
-// Baut für eine Art (z. B. 'measures') alles auf: Chips, Speichern, Liste, Bearbeiten, Löschen.
+// Baut für eine Art (z. B. 'measures') alles auf: Chips, Speichern, Bearbeiten.
 function setupKind(kind) {
   const config = KINDS[kind];
   const panel = document.getElementById(`kind-${kind}`);
@@ -129,9 +115,6 @@ function setupKind(kind) {
   const saveButton = panel.querySelector('[data-role="save"]');
   const cancelButton = panel.querySelector('[data-role="cancel"]');
   const formError = panel.querySelector('[data-role="error"]');
-  const list = panel.querySelector('[data-role="list"]');
-  const empty = panel.querySelector('[data-role="empty"]');
-  const count = panel.querySelector('[data-role="count"]');
 
   let editing = null; // der Eintrag, der gerade bearbeitet wird (oder null)
   let records = [];
@@ -212,46 +195,10 @@ function setupKind(kind) {
     return record;
   }
 
-  function renderList() {
-    empty.hidden = records.length > 0;
-    count.textContent = records.length ? `(${records.length})` : '';
-    list.replaceChildren(...records.map((record) => {
-      const item = el('li', 'entry');
-      const head = el('div', 'entry-head');
-      head.append(el('span', 'entry-date', formatDate(record.date)),
-        el('strong', '', config.title(record) || config.singular));
-      item.append(head);
-
-      const details = config.details(record).filter(Boolean);
-      if (details.length) item.append(el('div', 'entry-details', details.join(' · ')));
-      const tags = config.tags(record).filter(Boolean);
-      if (tags.length) {
-        const tagBox = el('div', 'entry-tags');
-        tags.forEach((tag) => tagBox.append(el('span', 'tag', tag)));
-        item.append(tagBox);
-      }
-      if (record.note) item.append(el('div', 'entry-note', record.note));
-
-      const actions = el('div', 'entry-actions');
-      const editButton = el('button', '', 'Bearbeiten');
-      editButton.type = 'button';
-      editButton.dataset.action = 'edit';
-      editButton.dataset.id = record.id;
-      const deleteButton = el('button', 'danger', 'Löschen');
-      deleteButton.type = 'button';
-      deleteButton.dataset.action = 'delete';
-      deleteButton.dataset.id = record.id;
-      actions.append(editButton, deleteButton);
-      item.append(actions);
-      return item;
-    }));
-  }
-
   async function refresh(keep) {
     records = await listRecords(kind);
     renderGroups();
     renderSuggestions();
-    renderList();
     resetForm(keep);
   }
 
@@ -325,28 +272,28 @@ function setupKind(kind) {
     refreshOverview().catch(() => {});
     showToast(wasEditing ? 'Änderung gespeichert' : `${config.singular} gespeichert`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Dem Reiter "Fälle" Bescheid geben (er lädt neu und springt nach einer Bearbeitung zurück)
+    window.dispatchEvent(new CustomEvent('entry-saved', { detail: { kind, wasEditing } }));
   });
 
-  cancelButton.addEventListener('click', () => resetForm());
+  cancelButton.addEventListener('click', () => {
+    resetForm();
+    window.dispatchEvent(new Event('edit-cancelled'));
+  });
 
-  list.addEventListener('click', async (event) => {
-    const button = event.target.closest('button[data-action]');
-    if (!button) return;
-    const record = await getRecord(kind, button.dataset.id);
-    if (!record) return;
-    if (button.dataset.action === 'edit') {
-      fillForm(record);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    const name = config.title(record) || config.singular;
-    if (!confirm(`${config.singular} vom ${formatDate(record.date)} (${name}) wirklich löschen?`)) return;
-    await deleteRecord(kind, record.id);
-    if (editing?.id === record.id) resetForm();
+  // "Bearbeiten" im Reiter "Fälle" (js/cases.js): Eintrag ins Formular laden
+  window.addEventListener('edit-entry', async (event) => {
+    if (event.detail.kind !== kind) return;
+    const record = await getRecord(kind, event.detail.id);
+    if (record) fillForm(record);
+  });
+
+  // Im Reiter "Fälle" gelöscht: Formular freigeben, falls genau dieser Eintrag offen war
+  window.addEventListener('entry-deleted', async (event) => {
+    if (event.detail.kind !== kind) return;
+    if (editing?.id === event.detail.id) resetForm();
     records = await listRecords(kind);
-    renderList();
-    refreshOverview().catch(() => {});
-    showToast('Eintrag gelöscht');
+    renderSuggestions();
   });
 
   return refresh;
@@ -369,6 +316,9 @@ function showKind(kind) {
 }
 
 kindSwitch.addEventListener('change', (event) => showKind(event.target.value));
+
+// Beim Bearbeiten aus dem Reiter "Fälle" gleich das passende Formular zeigen
+window.addEventListener('edit-entry', (event) => showKind(event.detail.kind));
 
 // ---------- Start ----------
 

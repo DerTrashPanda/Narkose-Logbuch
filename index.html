@@ -4,7 +4,8 @@
      Schritt 3: Reiter "Übersicht" mit Fortschritt je Kategorie und Nachträgen; Einstellung im Profil.
      Schritt 4: installierbar und offline (Manifest, Symbole, Service Worker, Update-Hinweis).
      Schritt 5: Import der alten Excel-Tabelle (CSV), Backup/Wiederherstellen und Export als CSV im Reiter "Export".
-     Schritt 6: im Reiter "Neuer Fall" zusätzlich Maßnahmen, Intensiv-Fälle und Notarzteinsätze (js/records.js). -->
+     Schritt 6: im Reiter "Neuer Fall" zusätzlich Maßnahmen, Intensiv-Fälle und Notarzteinsätze (js/records.js).
+     Schritt 7: eigener Reiter "Fälle" mit Liste, Suche und Filtern (js/cases.js). -->
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -142,10 +143,6 @@
           <button type="submit" id="save-button" class="primary">Speichern</button>
         </div>
       </form>
-
-      <h2 class="list-title">Bisherige Narkosen <span id="entry-count" class="count"></span></h2>
-      <p id="empty-list" class="muted">Noch keine Einträge.</p>
-      <ul id="entry-list" class="entry-list"></ul>
       </div>
 
       <!-- Schritt 6: Maßnahme (Einzelleistung ohne eigene Narkose). Chips füllt js/records.js ein. -->
@@ -189,9 +186,6 @@
             <button type="submit" data-role="save" class="primary">Speichern</button>
           </div>
         </form>
-        <h2 class="list-title">Bisherige Maßnahmen <span data-role="count" class="count"></span></h2>
-        <p data-role="empty" class="muted">Noch keine Maßnahmen.</p>
-        <ul data-role="list" class="entry-list"></ul>
       </div>
 
       <!-- Schritt 6: Intensiv-Fall -->
@@ -223,9 +217,6 @@
             <button type="submit" data-role="save" class="primary">Speichern</button>
           </div>
         </form>
-        <h2 class="list-title">Bisherige Intensiv-Fälle <span data-role="count" class="count"></span></h2>
-        <p data-role="empty" class="muted">Noch keine Intensiv-Fälle.</p>
-        <ul data-role="list" class="entry-list"></ul>
       </div>
 
       <!-- Schritt 6: Notarzteinsatz (Zusatz-Weiterbildung Notfallmedizin) -->
@@ -265,10 +256,62 @@
             <button type="submit" data-role="save" class="primary">Speichern</button>
           </div>
         </form>
-        <h2 class="list-title">Bisherige Notarzteinsätze <span data-role="count" class="count"></span></h2>
-        <p data-role="empty" class="muted">Noch keine Notarzteinsätze.</p>
-        <ul data-role="list" class="entry-list"></ul>
       </div>
+    </section>
+
+    <!-- Schritt 7: alle bisherigen Fälle. Liste, Suche und Filter steuert js/cases.js. -->
+    <section id="tab-cases" class="tab-panel" hidden>
+      <h2>Fälle</h2>
+      <label class="field">
+        <span class="field-label">Suchen</span>
+        <input type="search" id="cases-search" placeholder="z. B. Sectio, TAP, ZVK, NEF" autocomplete="off" enterkeyhint="search">
+      </label>
+
+      <!-- <details> ist ein eingebauter Aufklapp-Bereich: Tippen auf die Zeile öffnet und schließt ihn -->
+      <details id="cases-filters" class="filter-box">
+        <summary id="cases-filter-summary">Filter</summary>
+        <fieldset>
+          <legend>Art</legend>
+          <div class="chips" id="cases-kind">
+            <label class="chip"><input type="radio" name="cases-kind" value="all" checked><span>Alle</span></label>
+            <label class="chip"><input type="radio" name="cases-kind" value="anesthesia"><span>Narkose</span></label>
+            <label class="chip"><input type="radio" name="cases-kind" value="measures"><span>Maßnahme</span></label>
+            <label class="chip"><input type="radio" name="cases-kind" value="icu"><span>Intensiv</span></label>
+            <label class="chip"><input type="radio" name="cases-kind" value="emergencies"><span>Notarzt</span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Zeitraum</legend>
+          <div class="chips" id="cases-range">
+            <label class="chip"><input type="radio" name="cases-range" value="all" checked><span>Alles</span></label>
+            <label class="chip"><input type="radio" name="cases-range" value="thisMonth"><span>Dieser Monat</span></label>
+            <label class="chip"><input type="radio" name="cases-range" value="lastMonth"><span>Letzter Monat</span></label>
+            <label class="chip"><input type="radio" name="cases-range" value="thisYear"><span>Dieses Jahr</span></label>
+            <label class="chip"><input type="radio" name="cases-range" value="custom"><span>Zeitraum …</span></label>
+          </div>
+          <div id="cases-custom" class="field-row" hidden>
+            <label class="field">
+              <span class="field-label">von</span>
+              <input type="date" id="cases-from">
+            </label>
+            <label class="field">
+              <span class="field-label">bis</span>
+              <input type="date" id="cases-to">
+            </label>
+          </div>
+        </fieldset>
+        <label class="field" id="cases-procedure-row">
+          <span class="field-label">Eingriff</span>
+          <select id="cases-procedure"><option value="">Alle Eingriffe</option></select>
+        </label>
+      </details>
+
+      <div class="cases-result-row">
+        <p id="cases-result" class="muted">Wird geladen …</p>
+        <button type="button" id="cases-reset" class="link-button" hidden>Zurücksetzen</button>
+      </div>
+      <div id="cases-list"></div>
+      <button type="button" id="cases-more" class="secondary more-button" hidden></button>
     </section>
 
     <section id="tab-overview" class="tab-panel" hidden>
@@ -449,6 +492,9 @@
     <button type="button" data-tab="tab-new" aria-current="page">
       <span class="tab-icon" aria-hidden="true">＋</span>Neuer Fall
     </button>
+    <button type="button" data-tab="tab-cases">
+      <span class="tab-icon" aria-hidden="true">☰</span>Fälle
+    </button>
     <button type="button" data-tab="tab-overview">
       <span class="tab-icon" aria-hidden="true">▦</span>Übersicht
     </button>
@@ -507,6 +553,8 @@
   <script type="module" src="js/app.js"></script>
   <!-- Schritt 6: Maßnahmen, Intensiv, Notarzt -->
   <script type="module" src="js/records.js"></script>
+  <!-- Schritt 7: Reiter "Fälle" -->
+  <script type="module" src="js/cases.js"></script>
   <script type="module" src="js/import.js"></script>
   <!-- Backup, Wiederherstellen und Export als Tabelle -->
   <script type="module" src="js/backup.js"></script>

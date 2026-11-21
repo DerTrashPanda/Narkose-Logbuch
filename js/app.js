@@ -1,8 +1,9 @@
-// app.js – steuert die Oberfläche: Reiter, Formular "Neue Narkose" und die Liste.
+// app.js – steuert die Oberfläche: Reiter und Formular "Neue Narkose".
+// Die Liste der bisherigen Fälle steht seit Schritt 7 im eigenen Reiter "Fälle" (js/cases.js).
 // Das Speichern selbst erledigt db.js.
 
 import {
-  saveAnesthesia, getAnesthesia, listAnesthesias, deleteAnesthesia, requestPersistentStorage,
+  saveAnesthesia, getAnesthesia, listAnesthesias, requestPersistentStorage,
 } from './db.js';
 import {
   SPECIALTIES, ASA_CLASSES, GENERAL_ANESTHESIA, NEURAXIAL, BLOCKS,
@@ -37,9 +38,6 @@ const formTitle = document.getElementById('form-title');
 const saveButton = document.getElementById('save-button');
 const cancelEditButton = document.getElementById('cancel-edit');
 const formError = document.getElementById('form-error');
-const entryList = document.getElementById('entry-list');
-const emptyList = document.getElementById('empty-list');
-const entryCount = document.getElementById('entry-count');
 const procedureSuggestions = document.getElementById('procedure-suggestions');
 const toast = document.getElementById('toast');
 
@@ -70,12 +68,6 @@ function todayString() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-// "2026-11-21" -> "21.11.2026"
-function formatDate(isoDate) {
-  const [y, m, d] = isoDate.split('-');
-  return `${d}.${m}.${y}`;
 }
 
 function showToast(message) {
@@ -234,107 +226,11 @@ function validate(entry) {
   return null;
 }
 
-// ---------- Liste der Einträge ----------
-
-// Kurzbeschreibung der Verfahren, z. B. "ITN + PDK thorakal + TAP"
-function describeProcedures(entry) {
-  const parts = [];
-  if (entry.general !== 'keine') parts.push(entry.general);
-  if (entry.neuraxial !== 'keine') parts.push(entry.neuraxial);
-  if (entry.block1) parts.push(entry.block1);
-  if (entry.block2) parts.push(entry.block2);
-  if (entry.sedation) parts.push('Sedierung');
-  // nur ZVK/Arterie ohne Narkose: dann das als Überschrift zeigen
-  if (!parts.length) parts.push(...describeExtras(entry).filter((x) => x === 'ZVK' || x === 'Arterie'));
-  return parts.join(' + ');
-}
-
-function describeDetails(entry) {
-  const parts = [];
-  if (entry.specialty) parts.push(entry.specialty);
-  if (entry.asa) parts.push(`ASA ${entry.asa}`);
-  if (entry.setting === 'ambulant') parts.push('ambulant');
-  if (entry.location) parts.push(entry.location);
-  if (entry.procedure) parts.push(entry.procedure);
-  return parts.join(' · ');
-}
-
-function describeExtras(entry) {
-  const extras = [...(entry.airway || [])];
-  if (entry.ultrasound) extras.push('Sono');
-  if (entry.cvc) extras.push('ZVK');
-  if (entry.arterial) extras.push('Arterie');
-  if (entry.childUnder5) extras.push('Kind < 5 J.');
-  if (entry.emergency) extras.push('Notfall');
-  return extras;
-}
-
-function renderList(entries) {
-  emptyList.hidden = entries.length > 0;
-  entryCount.textContent = entries.length ? `(${entries.length})` : '';
-
-  // Wir bauen die Listeneinträge mit textContent statt innerHTML:
-  // so kann ein Text aus einer Notiz nie versehentlich als Code ausgeführt werden.
-  entryList.replaceChildren(...entries.map((entry) => {
-    const item = document.createElement('li');
-    item.className = 'entry';
-
-    const head = document.createElement('div');
-    head.className = 'entry-head';
-    const date = document.createElement('span');
-    date.className = 'entry-date';
-    date.textContent = formatDate(entry.date);
-    const procedures = document.createElement('strong');
-    procedures.textContent = describeProcedures(entry);
-    head.append(date, procedures);
-
-    const details = document.createElement('div');
-    details.className = 'entry-details';
-    details.textContent = describeDetails(entry);
-
-    const tags = document.createElement('div');
-    tags.className = 'entry-tags';
-    describeExtras(entry).forEach((extra) => {
-      const tag = document.createElement('span');
-      tag.className = 'tag';
-      tag.textContent = extra;
-      tags.append(tag);
-    });
-
-    const actions = document.createElement('div');
-    actions.className = 'entry-actions';
-    const editButton = document.createElement('button');
-    editButton.type = 'button';
-    editButton.textContent = 'Bearbeiten';
-    editButton.dataset.action = 'edit';
-    editButton.dataset.id = entry.id;
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.textContent = 'Löschen';
-    deleteButton.className = 'danger';
-    deleteButton.dataset.action = 'delete';
-    deleteButton.dataset.id = entry.id;
-    actions.append(editButton, deleteButton);
-
-    item.append(head, details);
-    if (tags.childElementCount) item.append(tags);
-    if (entry.note) {
-      const note = document.createElement('div');
-      note.className = 'entry-note';
-      note.textContent = entry.note;
-      item.append(note);
-    }
-    item.append(actions);
-    return item;
-  }));
-}
-
-// Lädt alle Einträge neu und baut Liste, Chips und Vorschläge auf.
+// Lädt alle Einträge neu und baut Chips und Vorschläge auf.
 async function refresh(keep) {
   const entries = await listAnesthesias();
   renderGroups(entries);
   renderProcedureSuggestions(entries);
-  renderList(entries);
   resetForm(keep);
 }
 
@@ -430,30 +326,27 @@ form.addEventListener('submit', async (event) => {
   await refresh(wasEditing ? {} : { date: entry.date, location: entry.location });
   showToast(wasEditing ? 'Änderung gespeichert' : 'Narkose gespeichert');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Dem Reiter "Fälle" Bescheid geben (er lädt neu und springt nach einer Bearbeitung zurück)
+  window.dispatchEvent(new CustomEvent('entry-saved', { detail: { kind: 'anesthesia', wasEditing } }));
 });
 
-cancelEditButton.addEventListener('click', () => resetForm());
+cancelEditButton.addEventListener('click', () => {
+  resetForm();
+  window.dispatchEvent(new Event('edit-cancelled'));
+});
 
-// Bearbeiten / Löschen in der Liste
-entryList.addEventListener('click', async (event) => {
-  const button = event.target.closest('button[data-action]');
-  if (!button) return;
-  const entry = await getAnesthesia(button.dataset.id);
-  if (!entry) return;
+// "Bearbeiten" im Reiter "Fälle" (js/cases.js): Narkose ins Formular laden
+window.addEventListener('edit-entry', async (event) => {
+  if (event.detail.kind !== 'anesthesia') return;
+  const entry = await getAnesthesia(event.detail.id);
+  if (entry) fillForm(entry);
+});
 
-  if (button.dataset.action === 'edit') {
-    fillForm(entry);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } else if (button.dataset.action === 'delete') {
-    const question = `Narkose vom ${formatDate(entry.date)} (${describeProcedures(entry)}) wirklich löschen?`;
-    if (!confirm(question)) return;
-    await deleteAnesthesia(entry.id);
-    if (editingId === entry.id) resetForm();
-    const entries = await listAnesthesias();
-    renderList(entries);
-    renderProcedureSuggestions(entries);
-    showToast('Eintrag gelöscht');
-  }
+// Im Reiter "Fälle" gelöscht: Formular freigeben, falls genau dieser Eintrag offen war
+window.addEventListener('entry-deleted', async (event) => {
+  if (event.detail.kind !== 'anesthesia') return;
+  if (editingId === event.detail.id) resetForm();
+  renderProcedureSuggestions(await listAnesthesias());
 });
 
 // Nach einem Import (js/import.js) Liste und Übersicht neu laden.
