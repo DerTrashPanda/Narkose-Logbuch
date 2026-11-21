@@ -3,8 +3,10 @@
 // Diese Datei rechnet nur. Sie zeigt nichts an und speichert nichts.
 // So kann man die Regeln an einer Stelle lesen und ändern.
 //
-// Richtzahlen: Startwerte aus dem eLogbuch-Export vom 19.11.2026 (WBO Baden-Württemberg 2022).
-// Die Richtlinie der LÄK Rheinland-Pfalz ist noch nicht geprüft.
+// Richtzahlen: geprüft am 21.11.2026 gegen die "Richtlinien über den Inhalt der Weiterbildung"
+// der LÄK Rheinland-Pfalz (3. Änderung vom 06.11.2024), Facharzt Anästhesiologie, S. 19–23.
+// Alle Zahlen stimmen mit dem eLogbuch-Export vom 19.11.2026 überein.
+// Notarzteinsätze (50, davon bis zu 25 Simulation): WBO RLP, Zusatz-Weiterbildung Notfallmedizin.
 
 // Der Kaudalblock zählt als rückenmarksnah, auch wenn er als "Block" (Abkürzung KB) eingetragen wurde.
 const CAUDAL_BLOCK_NAMES = ['KB', 'Kaudal', 'Kaudalblock'];
