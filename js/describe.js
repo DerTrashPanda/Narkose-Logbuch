@@ -23,6 +23,7 @@ function anesthesiaExtras(entry) {
   if (entry.ultrasound) extras.push('Sono');
   if (entry.cvc) extras.push('ZVK');
   if (entry.arterial) extras.push('Arterie');
+  if (entry.transplant) extras.push('Transplantation');
   if (entry.childUnder5) extras.push('Kind < 5 J.');
   if (entry.emergency) extras.push('Notfall');
   return extras;

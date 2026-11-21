@@ -100,6 +100,8 @@
         <fieldset>
           <legend>Fachgebiet</legend>
           <div class="chips" data-group="specialty" data-type="radio"></div>
+          <!-- Zusätzlich zum Fachgebiet, damit z. B. eine Nierentransplantation trotzdem "abdominell" zählt -->
+          <div class="chips" data-toggle="transplant" data-label="Organtransplantation"></div>
         </fieldset>
 
         <fieldset>
@@ -320,7 +322,7 @@
         <button type="button" id="add-supplement" class="link-button">＋ Nachtrag</button>
       </div>
       <p class="hint">Ist-Stand gegen die Richtzahl. Der hellere Teil des Balkens sind Nachträge.
-        Richtzahlen aus dem eLogbuch (WBO Baden-Württemberg 2022), für Rheinland-Pfalz noch ungeprüft.</p>
+        Richtzahlen nach der Richtlinie der LÄK Rheinland-Pfalz (Stand 3. Änderung, 06.11.2024).</p>
       <p id="count-rule" class="hint"></p>
       <!-- Die Kategorien mit Balken füllt js/overview.js ein -->
       <div id="progress-list"></div>

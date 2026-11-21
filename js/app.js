@@ -55,7 +55,7 @@ const GROUPS = {
 };
 
 // Einzelne Ja/Nein-Schalter.
-const TOGGLES = ['emergency', 'sedation', 'ultrasound', 'cvc', 'arterial', 'childUnder5'];
+const TOGGLES = ['emergency', 'sedation', 'ultrasound', 'cvc', 'arterial', 'childUnder5', 'transplant'];
 
 // Merkt sich, ob wir gerade einen bestehenden Eintrag bearbeiten (dann steht hier seine id).
 let editingId = null;

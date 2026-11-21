@@ -32,6 +32,7 @@ export const MAX_BLOCKS = 2;
 export const MEASURE_TYPES = [
   'ZVK', 'Arterie', 'Pleurapunktion', 'Pleuradrainage', 'Bronchoskopie', 'Tracheoskopie',
   'Fiberoptische Intubation', 'Videolaryngoskopie', 'Sono-gesteuerte Punktion',
+  'Farbduplex Leber/Niere', 'POC-Gerinnung',
   'Zwischenfalltraining', 'Sonstiges',
 ];
 
