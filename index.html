@@ -1,0 +1,79 @@
+<!doctype html>
+<!-- Startseite des Narkose-Logbuchs.
+     Schritt 1: nur das Grundgerüst mit vier Reitern, noch ohne Speichern. -->
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <!-- Sorgt dafür, dass die Seite auf dem Handy in Handybreite angezeigt wird -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Narkose-Logbuch</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top-bar">
+    <h1>Narkose-Logbuch</h1>
+  </header>
+
+  <main>
+    <!-- Jeder Reiter ist ein eigener Abschnitt. Sichtbar ist immer nur einer. -->
+    <section id="tab-new" class="tab-panel">
+      <h2>Neuer Fall</h2>
+      <p>Hier kannst du bald eine Narkose in wenigen Sekunden erfassen.</p>
+    </section>
+
+    <section id="tab-overview" class="tab-panel" hidden>
+      <h2>Übersicht</h2>
+      <p>Hier siehst du bald deinen Stand gegen die Richtzahlen der Weiterbildung.</p>
+    </section>
+
+    <section id="tab-export" class="tab-panel" hidden>
+      <h2>Export</h2>
+      <p>Hier kannst du bald deine Daten als Tabelle oder Backup speichern.</p>
+    </section>
+
+    <section id="tab-profile" class="tab-panel" hidden>
+      <h2>Profil</h2>
+      <p>Hier stehen bald deine Einstellungen und Richtzahlen.</p>
+    </section>
+  </main>
+
+  <!-- Reiter-Leiste unten, gut mit dem Daumen erreichbar -->
+  <nav class="tab-bar" aria-label="Bereiche">
+    <button type="button" data-tab="tab-new" aria-current="page">
+      <span class="tab-icon" aria-hidden="true">＋</span>Neuer Fall
+    </button>
+    <button type="button" data-tab="tab-overview">
+      <span class="tab-icon" aria-hidden="true">▦</span>Übersicht
+    </button>
+    <button type="button" data-tab="tab-export">
+      <span class="tab-icon" aria-hidden="true">⇩</span>Export
+    </button>
+    <button type="button" data-tab="tab-profile">
+      <span class="tab-icon" aria-hidden="true">●</span>Profil
+    </button>
+  </nav>
+
+  <script>
+    // Beim Tippen auf einen Reiter: passenden Abschnitt zeigen, alle anderen verstecken.
+    const tabButtons = document.querySelectorAll('.tab-bar button');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const targetId = button.dataset.tab;
+        tabPanels.forEach((panel) => {
+          panel.hidden = panel.id !== targetId;
+        });
+        tabButtons.forEach((other) => {
+          if (other === button) {
+            other.setAttribute('aria-current', 'page');
+          } else {
+            other.removeAttribute('aria-current');
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

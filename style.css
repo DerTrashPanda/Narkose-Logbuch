@@ -1,0 +1,106 @@
+/* Aussehen des Narkose-Logbuchs.
+   Farben stehen oben als Variablen, damit Hell- und Dunkelmodus leicht zu pflegen sind. */
+
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --text: #1b2430;
+  --muted: #5b6675;
+  --accent: #0f6e7a;
+  --border: #d9dee4;
+}
+
+/* Dunkelmodus: greift automatisch, wenn das Handy auf "dunkel" steht (Nachtdienst) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #11161c;
+    --surface: #1a2129;
+    --text: #e6eaef;
+    --muted: #9aa5b1;
+    --accent: #5cc3cf;
+    --border: #2c3540;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  /* Systemschrift des Geräts: keine Schrift aus dem Internet nötig */
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  /* Platz unten frei lassen, damit die Reiter-Leiste nichts verdeckt */
+  padding-bottom: 80px;
+}
+
+.top-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+.top-bar h1 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--accent);
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.tab-panel h2 {
+  margin-top: 4px;
+}
+
+.tab-panel p {
+  color: var(--muted);
+}
+
+/* Reiter-Leiste: fest am unteren Rand */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  /* Abstand für die Gestenleiste moderner Handys */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-bar button {
+  flex: 1;
+  /* mindestens 44 px hoch, damit man sie gut mit dem Finger trifft */
+  min-height: 64px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.tab-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* Der gerade aktive Reiter wird farbig hervorgehoben */
+.tab-bar button[aria-current="page"] {
+  color: var(--accent);
+  font-weight: 600;
+}
