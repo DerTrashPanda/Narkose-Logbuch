@@ -1,0 +1,10 @@
+﻿Datum;Fallnummer;Eingriff;ASA;ambulant/stationär;unter 5 Jahre?;Disziplin;Anästhesieverfahren;Verfahren 1;Verfahren 2;Verfahren 3;Verfahren 4;Sonstiges
+02.01.2026;BEISPIEL;Lap App;2;stationär;nein;abdominell;Allgemeinanästhesie;RSI;;;;
+02.01.2026;BEISPIEL;KTEP;3;stationär;nein;sonstige;Regional rückenmarksnah;Spinalanästhesie;AddBl;;;
+05.01.2026;BEISPIEL;Sectio;2;stationär;nein;Geburtshilfe;Regional rückenmarksnah;Spinale;;;;
+05.01.2026;BEISPIEL;Hemicolektomie;3;stationär;nein;abdominell;Allgemeinanästhesie;ITN;PDK;Arterie;ZVK;
+07.01.2026;BEISPIEL;Zircumzision;1;ambulant;ja;sonstige;Allgemeinanästhesie;LAMA;PWB;;;
+07.01.2026;BEISPIEL;MRT;1;ambulant;ja;sonstige;Sedierung;Sedierung;;;;
+08.01.2026;BEISPIEL;ZVK;4;stationär;nein;sonstige;;ZVK;;;;auf Intensiv
+08.01.2026;BEISPIEL;;;;;;;;;;;
+09.01.2026;BEISPIEL;S-ASK;2;stationär;nein;sonstige;Allgemeinanästhesie;ITN;Plexus Xyz;;;

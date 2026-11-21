@@ -2,7 +2,8 @@
 <!-- Startseite des Narkose-Logbuchs.
      Schritt 2: Reiter "Neuer Fall" mit Formular und Liste; Speichern auf dem Gerät (IndexedDB).
      Schritt 3: Reiter "Übersicht" mit Fortschritt je Kategorie und Nachträgen; Einstellung im Profil.
-     Schritt 4: installierbar und offline (Manifest, Symbole, Service Worker, Update-Hinweis). -->
+     Schritt 4: installierbar und offline (Manifest, Symbole, Service Worker, Update-Hinweis).
+     Schritt 5 (Teil): Import der alten Excel-Tabelle als CSV im Reiter "Export". -->
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -156,6 +157,60 @@
     <section id="tab-export" class="tab-panel" hidden>
       <h2>Export</h2>
       <p>Hier kannst du bald deine Daten als Tabelle oder Backup speichern.</p>
+
+      <!-- Schritt 5: alte Excel-Tabelle übernehmen. Die Logik steht in js/import.js. -->
+      <h3 class="section-title">Alte Tabelle importieren</h3>
+      <ol class="hint steps">
+        <li>Excel-Datei öffnen, unten das Blatt <strong>„Anästhesie Fälle“</strong> anklicken.</li>
+        <li>Am besten die Spalte <strong>Fallnummer</strong> löschen (die App übernimmt sie sowieso nicht).</li>
+        <li>Datei → Speichern unter → Dateityp <strong>„CSV UTF-8 (durch Trennzeichen getrennt)“</strong>.</li>
+        <li>Hier die gespeicherte .csv-Datei wählen. Erst nach der Vorschau wird etwas gespeichert.</li>
+      </ol>
+      <label class="file-button">
+        CSV-Datei wählen
+        <input type="file" id="import-file" accept=".csv,text/csv,text/plain">
+      </label>
+      <p id="import-error" class="error" role="alert" hidden></p>
+
+      <div id="import-step-mapping" hidden>
+        <h3 class="section-title">1. Spalten zuordnen</h3>
+        <p class="hint">Links die Spalte aus deiner Datei, rechts das Feld in der App. Meist passt der Vorschlag.</p>
+        <div id="import-mapping" class="mapping-list"></div>
+        <label class="setting">
+          <input type="checkbox" id="import-sectio" checked>
+          <span>
+            <strong>Sectio aus dem Eingriff erkennen</strong>
+            <span class="hint">Steht beim Eingriff „Sectio“, wird das Fachgebiet „Sectio“ (zählt auch bei Geburtshilfe).</span>
+          </span>
+        </label>
+      </div>
+
+      <div id="import-step-preview" hidden>
+        <h3 class="section-title">2. Vorschau</h3>
+        <p id="import-summary"></p>
+        <p id="import-duplicate" class="error" hidden></p>
+        <details class="import-details" open>
+          <summary>Zeilen mit Hinweis <span id="import-warning-count" class="count"></span></summary>
+          <ul id="import-warnings" class="import-list"></ul>
+        </details>
+        <details class="import-details">
+          <summary>Übersprungene Zeilen <span id="import-skipped-count" class="count"></span></summary>
+          <ul id="import-skipped" class="import-list"></ul>
+        </details>
+        <details class="import-details">
+          <summary>Alle Narkosen, die importiert werden <span id="import-all-count" class="count"></span></summary>
+          <ul id="import-all" class="import-list"></ul>
+        </details>
+        <div class="dialog-actions">
+          <button type="button" id="import-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="import-confirm" class="primary">Importieren</button>
+        </div>
+      </div>
+
+      <div id="import-last" hidden>
+        <p id="import-last-text" class="hint"></p>
+        <button type="button" id="import-undo" class="secondary danger-text">Letzten Import rückgängig machen</button>
+      </div>
     </section>
 
     <section id="tab-profile" class="tab-panel" hidden>
@@ -242,6 +297,7 @@
 
   <!-- type="module": moderne JavaScript-Datei, die andere Dateien (db.js, options.js) laden darf -->
   <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/import.js"></script>
   <!-- Offline-Modus, Update-Hinweis und Installieren -->
   <script type="module" src="js/pwa.js"></script>
 </body>
