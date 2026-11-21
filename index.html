@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Startseite des Narkose-Logbuchs.
-     Schritt 1: nur das Grundgerüst mit vier Reitern, noch ohne Speichern. -->
+     Schritt 2: Reiter "Neuer Fall" mit Formular und Liste; Speichern auf dem Gerät (IndexedDB). -->
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -18,8 +18,101 @@
   <main>
     <!-- Jeder Reiter ist ein eigener Abschnitt. Sichtbar ist immer nur einer. -->
     <section id="tab-new" class="tab-panel">
-      <h2>Neuer Fall</h2>
-      <p>Hier kannst du bald eine Narkose in wenigen Sekunden erfassen.</p>
+      <!-- Formular für eine Narkose. Die Auswahl-Knöpfe ("Chips") füllt js/app.js ein. -->
+      <form id="anesthesia-form" novalidate>
+        <div class="form-head">
+          <h2 id="form-title">Neue Narkose</h2>
+          <button type="button" id="cancel-edit" class="link-button" hidden>Abbrechen</button>
+        </div>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">Datum</span>
+            <input type="date" name="date" required>
+          </label>
+          <div class="chips" data-toggle="emergency" data-label="Notfall"></div>
+        </div>
+
+        <fieldset>
+          <legend>Allgemeinanästhesie</legend>
+          <div class="chips" data-group="general" data-type="radio"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Rückenmarksnah</legend>
+          <div class="chips" data-group="neuraxial" data-type="radio"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Periphere Blöcke <small>(höchstens 2)</small></legend>
+          <div class="chips" data-group="blocks" data-type="checkbox"></div>
+          <div class="add-own">
+            <input type="text" placeholder="Anderer Block" aria-label="Anderen Block hinzufügen" data-add-for="blocks">
+            <button type="button" data-add-button="blocks">＋</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Weitere</legend>
+          <div class="chips">
+            <span data-toggle="sedation" data-label="Sedierung/Standby"></span>
+            <span data-toggle="ultrasound" data-label="Sono"></span>
+            <span data-toggle="cvc" data-label="ZVK"></span>
+            <span data-toggle="arterial" data-label="Arterie"></span>
+          </div>
+          <div class="chips" data-group="airway" data-type="checkbox"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Fachgebiet</legend>
+          <div class="chips" data-group="specialty" data-type="radio"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>ASA</legend>
+          <div class="chips" data-group="asa" data-type="radio"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Patient</legend>
+          <div class="chips">
+            <span data-group="setting" data-type="radio"></span>
+            <span data-toggle="childUnder5" data-label="Kind &lt; 5 J."></span>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Ort</legend>
+          <div class="chips" data-group="location" data-type="radio"></div>
+          <div class="add-own">
+            <input type="text" placeholder="Anderer Ort" aria-label="Anderen Ort hinzufügen" data-add-for="location">
+            <button type="button" data-add-button="location">＋</button>
+          </div>
+        </fieldset>
+
+        <label class="field">
+          <span class="field-label">Eingriff <small>(optional)</small></span>
+          <input type="text" name="procedure" list="procedure-suggestions" autocomplete="off">
+          <!-- Vorschläge aus bisherigen Einträgen -->
+          <datalist id="procedure-suggestions"></datalist>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Notiz <small>(optional)</small></span>
+          <textarea name="note" rows="2"></textarea>
+          <span class="hint">Keine identifizierenden Angaben (kein Name, kein Geburtsdatum, keine Fallnummer).</span>
+        </label>
+
+        <p id="form-error" class="error" role="alert" hidden></p>
+
+        <div class="save-bar">
+          <button type="submit" id="save-button" class="primary">Speichern</button>
+        </div>
+      </form>
+
+      <h2 class="list-title">Bisherige Narkosen <span id="entry-count" class="count"></span></h2>
+      <p id="empty-list" class="muted">Noch keine Einträge.</p>
+      <ul id="entry-list" class="entry-list"></ul>
     </section>
 
     <section id="tab-overview" class="tab-panel" hidden>
@@ -54,26 +147,10 @@
     </button>
   </nav>
 
-  <script>
-    // Beim Tippen auf einen Reiter: passenden Abschnitt zeigen, alle anderen verstecken.
-    const tabButtons = document.querySelectorAll('.tab-bar button');
-    const tabPanels = document.querySelectorAll('.tab-panel');
+  <!-- Hinweis, falls gerade gespeichert wurde -->
+  <div id="toast" class="toast" role="status" hidden></div>
 
-    tabButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const targetId = button.dataset.tab;
-        tabPanels.forEach((panel) => {
-          panel.hidden = panel.id !== targetId;
-        });
-        tabButtons.forEach((other) => {
-          if (other === button) {
-            other.setAttribute('aria-current', 'page');
-          } else {
-            other.removeAttribute('aria-current');
-          }
-        });
-      });
-    });
-  </script>
+  <!-- type="module": moderne JavaScript-Datei, die andere Dateien (db.js, options.js) laden darf -->
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
