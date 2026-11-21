@@ -136,8 +136,8 @@ const TOKENS = {
   axplex: { kind: 'block', value: 'Axillär' },
   axillär: { kind: 'block', value: 'Axillär' },
   interskalenär: { kind: 'block', value: 'Interskalenär' },
-  // Nicht eindeutig: bleiben unter ihrem eigenen Namen als Block (zählen als periphere RA).
-  isk: { kind: 'block', value: 'ISK', warn: '„ISK“ als eigener Block übernommen (Interskalenär oder Ischiadicus-Katheter?)' },
+  // Allgemeine Namen ohne genaue Art: bleiben so als Block (zählen als periphere RA).
+  isk: { kind: 'block', value: 'Interskalenär' }, // ISK = Interskalenärkatheter (vom Nutzer bestätigt)
   faszienblock: { kind: 'block', value: 'Faszienblock' },
   plexusblock: { kind: 'block', value: 'Plexusblock' },
 
