@@ -8,6 +8,9 @@
   --muted: #5b6675;
   --accent: #0f6e7a;
   --border: #d9dee4;
+  --chip-on-bg: #0f6e7a;
+  --chip-on-text: #ffffff;
+  --danger: #b3261e;
 }
 
 /* Dunkelmodus: greift automatisch, wenn das Handy auf "dunkel" steht (Nachtdienst) */
@@ -19,6 +22,9 @@
     --muted: #9aa5b1;
     --accent: #5cc3cf;
     --border: #2c3540;
+    --chip-on-bg: #5cc3cf;
+    --chip-on-text: #0b1217;
+    --danger: #f2b8b5;
   }
 }
 
@@ -103,4 +109,276 @@ main {
 .tab-bar button[aria-current="page"] {
   color: var(--accent);
   font-weight: 600;
+}
+
+/* ---------- Schritt 2: Formular "Neue Narkose" ---------- */
+
+.form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.link-button {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  min-height: 44px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+fieldset {
+  border: none;
+  margin: 0 0 14px;
+  padding: 0;
+}
+
+legend,
+.field-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+legend small,
+.field-label small {
+  font-weight: 400;
+}
+
+.field {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.field-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.field-row .field {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+input[type="date"],
+input[type="text"],
+textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.hint {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Chips: große, antippbare Knöpfe statt Auswahllisten */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Gruppen innerhalb einer Chip-Zeile reihen sich einfach mit ein */
+.chips > span {
+  display: contents;
+}
+
+.chips + .chips {
+  margin-top: 8px;
+}
+
+.chip {
+  position: relative;
+}
+
+/* Das eigentliche Auswahlfeld ist unsichtbar, man tippt auf die Beschriftung */
+.chip input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.chip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+}
+
+.chip input:checked + span {
+  background: var(--chip-on-bg);
+  border-color: var(--chip-on-bg);
+  color: var(--chip-on-text);
+  font-weight: 600;
+}
+
+/* Sichtbarer Rahmen, wenn man mit der Tastatur (PC) unterwegs ist */
+.chip input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.add-own {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.add-own button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+p.error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* Speichern-Knopf klebt unten über der Reiter-Leiste: immer mit dem Daumen erreichbar */
+.save-bar {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  padding: 8px 0;
+  background: var(--bg);
+}
+
+.primary {
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  border-radius: 12px;
+  background: var(--chip-on-bg);
+  color: var(--chip-on-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ---------- Liste der Einträge ---------- */
+
+.list-title {
+  margin-top: 28px;
+}
+
+.count,
+.muted {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.entry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.entry {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.entry-head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.entry-date {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.entry-details,
+.entry-note {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.entry-note {
+  font-style: italic;
+}
+
+.entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.tag {
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.entry-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.entry-actions button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.entry-actions .danger {
+  color: var(--danger);
+}
+
+/* Kurze Bestätigung "Gespeichert" */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(150px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 15px;
+  z-index: 10;
+}
+
+.toast[hidden] {
+  display: none;
 }
