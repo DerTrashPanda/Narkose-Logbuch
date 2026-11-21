@@ -224,10 +224,11 @@ function readForm() {
 // Prüft, ob der Eintrag sinnvoll ist. Gibt eine Fehlermeldung zurück oder null.
 function validate(entry) {
   if (!entry.date) return 'Bitte ein Datum angeben.';
+  // ZVK/Arterie allein ist auch erlaubt (z. B. importierte Einzelmaßnahmen, bis es Schritt 6 "Maßnahmen" gibt).
   const hasProcedure = entry.general !== 'keine' || entry.neuraxial !== 'keine'
-    || entry.block1 || entry.sedation;
+    || entry.block1 || entry.sedation || entry.cvc || entry.arterial;
   if (!hasProcedure) {
-    return 'Bitte mindestens ein Verfahren wählen: Allgemeinanästhesie, rückenmarksnah, Block oder Sedierung.';
+    return 'Bitte mindestens ein Verfahren wählen: Allgemeinanästhesie, rückenmarksnah, Block, Sedierung, ZVK oder Arterie.';
   }
   return null;
 }
@@ -242,6 +243,8 @@ function describeProcedures(entry) {
   if (entry.block1) parts.push(entry.block1);
   if (entry.block2) parts.push(entry.block2);
   if (entry.sedation) parts.push('Sedierung');
+  // nur ZVK/Arterie ohne Narkose: dann das als Überschrift zeigen
+  if (!parts.length) parts.push(...describeExtras(entry).filter((x) => x === 'ZVK' || x === 'Arterie'));
   return parts.join(' + ');
 }
 
@@ -450,6 +453,12 @@ entryList.addEventListener('click', async (event) => {
     renderProcedureSuggestions(entries);
     showToast('Eintrag gelöscht');
   }
+});
+
+// Nach einem Import (js/import.js) Liste und Übersicht neu laden.
+window.addEventListener('entries-changed', () => {
+  refresh().catch(() => {});
+  refreshOverview().catch(() => {});
 });
 
 // ---------- Start ----------

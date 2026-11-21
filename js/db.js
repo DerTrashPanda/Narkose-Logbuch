@@ -107,6 +107,49 @@ export async function deleteAnesthesia(id) {
   await asPromise(tx.objectStore(STORE_ANESTHESIAS).delete(id));
 }
 
+// ---------- Import (Schritt 5) ----------
+
+// Speichert viele Narkosen auf einmal, in EINER "Transaktion":
+// Entweder werden alle gespeichert oder – falls etwas schiefgeht – gar keine.
+// Jeder Eintrag bekommt die importId, damit man den Import später rückgängig machen kann.
+export async function saveImportedAnesthesias(entries, importId) {
+  const db = await openDatabase();
+  const now = new Date().toISOString();
+  const tx = db.transaction(STORE_ANESTHESIAS, 'readwrite');
+  const store = tx.objectStore(STORE_ANESTHESIAS);
+  entries.forEach((entry) => {
+    store.put({
+      ...entry,
+      id: createId(),
+      importId,
+      schemaVersion: SCHEMA_VERSION,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+  return entries.length;
+}
+
+// Löscht alle Narkosen, die mit dieser importId gespeichert wurden. Gibt die Anzahl zurück.
+export async function deleteImportedAnesthesias(importId) {
+  const all = await listAnesthesias();
+  const matching = all.filter((entry) => entry.importId === importId);
+  const db = await openDatabase();
+  const tx = db.transaction(STORE_ANESTHESIAS, 'readwrite');
+  const store = tx.objectStore(STORE_ANESTHESIAS);
+  matching.forEach((entry) => store.delete(entry.id));
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  return matching.length;
+}
+
 // ---------- Nachträge ----------
 
 // Speichert einen Nachtrag: { category, amount, from, to, source, note }
