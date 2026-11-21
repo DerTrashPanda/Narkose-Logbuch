@@ -3,7 +3,8 @@
      Schritt 2: Reiter "Neuer Fall" mit Formular und Liste; Speichern auf dem Gerät (IndexedDB).
      Schritt 3: Reiter "Übersicht" mit Fortschritt je Kategorie und Nachträgen; Einstellung im Profil.
      Schritt 4: installierbar und offline (Manifest, Symbole, Service Worker, Update-Hinweis).
-     Schritt 5: Import der alten Excel-Tabelle (CSV), Backup/Wiederherstellen und Export als CSV im Reiter "Export". -->
+     Schritt 5: Import der alten Excel-Tabelle (CSV), Backup/Wiederherstellen und Export als CSV im Reiter "Export".
+     Schritt 6: im Reiter "Neuer Fall" zusätzlich Maßnahmen, Intensiv-Fälle und Notarzteinsätze (js/records.js). -->
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -41,6 +42,15 @@
   <main>
     <!-- Jeder Reiter ist ein eigener Abschnitt. Sichtbar ist immer nur einer. -->
     <section id="tab-new" class="tab-panel">
+      <!-- Schritt 6: Was will ich erfassen? Umschalten steuert js/records.js. -->
+      <div id="kind-switch" class="kind-switch" role="radiogroup" aria-label="Was erfassen?">
+        <label class="chip"><input type="radio" name="kind" value="anesthesia" checked><span>Narkose</span></label>
+        <label class="chip"><input type="radio" name="kind" value="measures"><span>Maßnahme</span></label>
+        <label class="chip"><input type="radio" name="kind" value="icu"><span>Intensiv</span></label>
+        <label class="chip"><input type="radio" name="kind" value="emergencies"><span>Notarzt</span></label>
+      </div>
+
+      <div id="kind-anesthesia">
       <!-- Formular für eine Narkose. Die Auswahl-Knöpfe ("Chips") füllt js/app.js ein. -->
       <form id="anesthesia-form" novalidate>
         <div class="form-head">
@@ -136,6 +146,129 @@
       <h2 class="list-title">Bisherige Narkosen <span id="entry-count" class="count"></span></h2>
       <p id="empty-list" class="muted">Noch keine Einträge.</p>
       <ul id="entry-list" class="entry-list"></ul>
+      </div>
+
+      <!-- Schritt 6: Maßnahme (Einzelleistung ohne eigene Narkose). Chips füllt js/records.js ein. -->
+      <div id="kind-measures" hidden>
+        <form novalidate>
+          <div class="form-head">
+            <h2 data-role="title">Neue Maßnahme</h2>
+            <button type="button" data-role="cancel" class="link-button" hidden>Abbrechen</button>
+          </div>
+          <label class="field">
+            <span class="field-label">Datum</span>
+            <input type="date" name="date" required>
+          </label>
+          <fieldset>
+            <legend>Was?</legend>
+            <div class="chips" data-group="type"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Weitere</legend>
+            <div class="chips">
+              <span data-toggle="simulation"></span>
+              <span data-toggle="ultrasound"></span>
+            </div>
+            <span class="hint">„Simulation“ = am Phantom/im Kurs. Wichtig für Fiberoptik (höchstens die Hälfte darf Simulation sein).</span>
+          </fieldset>
+          <fieldset>
+            <legend>Ort <small>(optional)</small></legend>
+            <div class="chips" data-group="location"></div>
+            <div class="add-own">
+              <input type="text" placeholder="Anderer Ort" aria-label="Anderen Ort hinzufügen" data-add-for="location">
+              <button type="button" data-add-button="location">＋</button>
+            </div>
+          </fieldset>
+          <label class="field">
+            <span class="field-label">Notiz <small>(optional)</small></span>
+            <textarea name="note" rows="2"></textarea>
+            <span class="hint">Keine identifizierenden Angaben (kein Name, kein Geburtsdatum, keine Fallnummer).</span>
+          </label>
+          <p data-role="error" class="error" role="alert" hidden></p>
+          <div class="save-bar">
+            <button type="submit" data-role="save" class="primary">Speichern</button>
+          </div>
+        </form>
+        <h2 class="list-title">Bisherige Maßnahmen <span data-role="count" class="count"></span></h2>
+        <p data-role="empty" class="muted">Noch keine Maßnahmen.</p>
+        <ul data-role="list" class="entry-list"></ul>
+      </div>
+
+      <!-- Schritt 6: Intensiv-Fall -->
+      <div id="kind-icu" hidden>
+        <form novalidate>
+          <div class="form-head">
+            <h2 data-role="title">Neuer Intensiv-Fall</h2>
+            <button type="button" data-role="cancel" class="link-button" hidden>Abbrechen</button>
+          </div>
+          <label class="field">
+            <span class="field-label">Datum</span>
+            <input type="date" name="date" required>
+          </label>
+          <fieldset>
+            <legend>Was trifft zu?</legend>
+            <div class="chips">
+              <span data-toggle="organs2"></span>
+              <span data-toggle="ventilation"></span>
+            </div>
+            <span class="hint">Ein Fall kann in beiden Kategorien zählen.</span>
+          </fieldset>
+          <label class="field">
+            <span class="field-label">Notiz <small>(optional)</small></span>
+            <textarea name="note" rows="2"></textarea>
+            <span class="hint">Keine identifizierenden Angaben (kein Name, kein Geburtsdatum, keine Fallnummer).</span>
+          </label>
+          <p data-role="error" class="error" role="alert" hidden></p>
+          <div class="save-bar">
+            <button type="submit" data-role="save" class="primary">Speichern</button>
+          </div>
+        </form>
+        <h2 class="list-title">Bisherige Intensiv-Fälle <span data-role="count" class="count"></span></h2>
+        <p data-role="empty" class="muted">Noch keine Intensiv-Fälle.</p>
+        <ul data-role="list" class="entry-list"></ul>
+      </div>
+
+      <!-- Schritt 6: Notarzteinsatz (Zusatz-Weiterbildung Notfallmedizin) -->
+      <div id="kind-emergencies" hidden>
+        <form novalidate>
+          <div class="form-head">
+            <h2 data-role="title">Neuer Notarzteinsatz</h2>
+            <button type="button" data-role="cancel" class="link-button" hidden>Abbrechen</button>
+          </div>
+          <label class="field">
+            <span class="field-label">Datum</span>
+            <input type="date" name="date" required>
+          </label>
+          <fieldset>
+            <legend>Rettungsmittel</legend>
+            <div class="chips" data-group="vehicle"></div>
+            <span class="hint">Höchstens 25 Einsätze aus dem Simulationskurs werden angerechnet.</span>
+          </fieldset>
+          <label class="field">
+            <span class="field-label">Einsatzart/Stichwort <small>(optional)</small></span>
+            <input type="text" name="keyword" list="keyword-suggestions" autocomplete="off" placeholder="z. B. ACS, Reanimation, Trauma">
+            <datalist id="keyword-suggestions" data-suggest="keyword"></datalist>
+          </label>
+          <label class="field">
+            <span class="field-label">Unter Anleitung von <small>(optional)</small></span>
+            <input type="text" name="supervisor" list="supervisor-suggestions" autocomplete="off" placeholder="Initialen oder Funktion">
+            <datalist id="supervisor-suggestions" data-suggest="supervisor"></datalist>
+            <span class="hint">Initialen oder Funktion reichen, kein voller Name nötig.</span>
+          </label>
+          <label class="field">
+            <span class="field-label">Notiz <small>(optional)</small></span>
+            <textarea name="note" rows="2"></textarea>
+            <span class="hint">Keine identifizierenden Angaben zum Patienten (kein Name, keine Adresse, keine Einsatznummer).</span>
+          </label>
+          <p data-role="error" class="error" role="alert" hidden></p>
+          <div class="save-bar">
+            <button type="submit" data-role="save" class="primary">Speichern</button>
+          </div>
+        </form>
+        <h2 class="list-title">Bisherige Notarzteinsätze <span data-role="count" class="count"></span></h2>
+        <p data-role="empty" class="muted">Noch keine Notarzteinsätze.</p>
+        <ul data-role="list" class="entry-list"></ul>
+      </div>
     </section>
 
     <section id="tab-overview" class="tab-panel" hidden>
@@ -159,7 +292,7 @@
 
       <!-- Schritt 5: Vollbackup. Die Logik steht in js/backup.js. -->
       <h3 class="section-title">Backup</h3>
-      <p class="hint">Sichert <strong>alles</strong> (Narkosen, Nachträge, Einstellungen) in eine Datei.
+      <p class="hint">Sichert <strong>alles</strong> (Narkosen, Maßnahmen, Intensiv, Notarzt, Nachträge, Einstellungen) in eine Datei.
         Am Handy öffnet sich das Teilen-Menü: iPhone „In Dateien sichern“, Android z. B. Google Drive.
         Am PC landet die Datei im Download-Ordner.</p>
       <p id="backup-status" class="backup-status"></p>
@@ -226,6 +359,9 @@
       <div class="export-buttons">
         <button type="button" id="export-anesthesias" class="primary">Narkosen (Einzelfälle)</button>
         <button type="button" id="export-summary" class="secondary">Zusammenfassung je Kategorie</button>
+        <button type="button" id="export-measures" class="secondary">Maßnahmen</button>
+        <button type="button" id="export-icu" class="secondary">Intensiv-Fälle</button>
+        <button type="button" id="export-emergencies" class="secondary">Notarzteinsätze</button>
         <button type="button" id="export-supplements" class="secondary">Alle Nachträge</button>
       </div>
 
@@ -269,7 +405,7 @@
           <ul id="import-skipped" class="import-list"></ul>
         </details>
         <details class="import-details">
-          <summary>Alle Narkosen, die importiert werden <span id="import-all-count" class="count"></span></summary>
+          <summary>Alle Zeilen, die importiert werden <span id="import-all-count" class="count"></span></summary>
           <ul id="import-all" class="import-list"></ul>
         </details>
         <div class="dialog-actions">
@@ -369,6 +505,8 @@
 
   <!-- type="module": moderne JavaScript-Datei, die andere Dateien (db.js, options.js) laden darf -->
   <script type="module" src="js/app.js"></script>
+  <!-- Schritt 6: Maßnahmen, Intensiv, Notarzt -->
+  <script type="module" src="js/records.js"></script>
   <script type="module" src="js/import.js"></script>
   <!-- Backup, Wiederherstellen und Export als Tabelle -->
   <script type="module" src="js/backup.js"></script>

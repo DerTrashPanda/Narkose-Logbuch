@@ -1,7 +1,8 @@
 // backup.js – Vollbackup: ALLE Daten in eine Datei sichern und daraus wiederherstellen.
 //
 // Das Backup ist eine JSON-Datei. JSON ist ein einfaches Textformat für Daten
-// (man kann es mit jedem Texteditor öffnen). Darin stehen alle Narkosen, Nachträge und Einstellungen.
+// (man kann es mit jedem Texteditor öffnen). Darin stehen alle Narkosen, Maßnahmen, Intensiv-Fälle,
+// Notarzteinsätze, Nachträge und Einstellungen.
 // Wofür? Wenn das Handy kaputtgeht, verloren geht oder du die App auf ein neues Gerät umziehst.
 // Die Datei verlässt das Gerät nur dorthin, wohin DU sie teilst oder speicherst.
 
@@ -19,6 +20,18 @@ const BACKUP_FORMAT = 1;
 const REMINDER_DAYS = 14;
 // Diese Einstellung gehört zum Gerät, nicht ins Backup (sonst würde ein altes Backup sie zurückdrehen).
 const DEVICE_ONLY_SETTINGS = ['lastBackup'];
+
+// Die Einträge aus Schritt 6. Backups von vor Schritt 6 haben diese Listen noch nicht –
+// dann gelten sie als leer.
+const RECORD_KINDS = ['measures', 'icu', 'emergencies'];
+// Alle Arten von Einträgen, mit Namen für die Anzeige (Einzahl, Mehrzahl)
+const ALL_KINDS = [
+  ['anesthesias', 'Narkose', 'Narkosen'],
+  ['measures', 'Maßnahme', 'Maßnahmen'],
+  ['icu', 'Intensiv-Fall', 'Intensiv-Fälle'],
+  ['emergencies', 'Notarzteinsatz', 'Notarzteinsätze'],
+  ['supplements', 'Nachtrag', 'Nachträge'],
+];
 
 const backupButton = document.getElementById('backup-create');
 const backupStatus = document.getElementById('backup-status');
@@ -58,6 +71,19 @@ function plural(count, one, many) {
   return `${count} ${count === 1 ? one : many}`;
 }
 
+// "264 Narkosen, 4 Maßnahmen, 3 Nachträge" – Arten mit 0 Einträgen werden weggelassen
+// (außer Narkosen, die stehen immer da). counts = { anesthesias: 264, measures: 4, ... }
+function describeCounts(counts) {
+  return ALL_KINDS
+    .filter(([kind]) => kind === 'anesthesias' || counts[kind])
+    .map(([kind, one, many]) => plural(counts[kind] || 0, one, many))
+    .join(', ');
+}
+
+function countsOf(data) {
+  return Object.fromEntries(ALL_KINDS.map(([kind]) => [kind, (data[kind] || []).length]));
+}
+
 // ---------- Backup erstellen ----------
 
 async function createBackupFile() {
@@ -67,9 +93,12 @@ async function createBackupFile() {
     backupFormat: BACKUP_FORMAT,
     schemaVersion: SCHEMA_VERSION,
     createdAt: new Date().toISOString(),
-    counts: { anesthesias: data.anesthesias.length, supplements: data.supplements.length },
+    counts: countsOf(data),
     anesthesias: data.anesthesias,
     supplements: data.supplements,
+    measures: data.measures,
+    icu: data.icu,
+    emergencies: data.emergencies,
     settings: data.settings.filter((row) => !DEVICE_ONLY_SETTINGS.includes(row.key)),
   };
   // JSON.stringify macht aus den Daten Text; die 1 sorgt für Zeilenumbrüche (besser lesbar).
@@ -86,7 +115,7 @@ backupButton.addEventListener('click', async () => {
     await handOverFile(file, async () => {
       await saveSetting('lastBackup', backup.createdAt);
       renderBackupStatus();
-      showMessage(`Backup mit ${plural(backup.counts.anesthesias, 'Narkose', 'Narkosen')} erstellt.`);
+      showMessage(`Backup mit ${describeCounts(backup.counts)} erstellt.`);
     });
   } catch (error) {
     showMessage(`Backup hat nicht geklappt: ${error.message}`);
@@ -100,7 +129,7 @@ backupButton.addEventListener('click', async () => {
 // Zeigt an, wann das letzte Backup war – mit Erinnerung nach 14 Tagen.
 async function renderBackupStatus() {
   const [{ lastBackup }, data] = await Promise.all([getSettings(), readAllData()]);
-  const hasData = data.anesthesias.length > 0 || data.supplements.length > 0;
+  const hasData = ALL_KINDS.some(([kind]) => data[kind].length > 0);
   if (!lastBackup) {
     backupStatus.textContent = hasData
       ? 'Noch kein Backup erstellt. Bitte einmal sichern.'
@@ -137,6 +166,13 @@ function checkBackup(backup) {
   if (broken) return 'In der Backup-Datei ist eine Narkose ohne gültige ID oder Datum. Datei beschädigt?';
   if (backup.supplements.some((s) => !s || !s.id || !s.category)) {
     return 'In der Backup-Datei ist ein Nachtrag ohne gültige ID oder Kategorie. Datei beschädigt?';
+  }
+  for (const kind of RECORD_KINDS) {
+    if (backup[kind] === undefined) continue; // älteres Backup ohne diese Liste: in Ordnung
+    if (!Array.isArray(backup[kind])
+      || backup[kind].some((r) => !r || !r.id || !datePattern.test(r.date || ''))) {
+      return 'In der Backup-Datei ist ein Eintrag ohne gültige ID oder Datum. Datei beschädigt?';
+    }
   }
   return null;
 }
@@ -175,27 +211,30 @@ restoreInput.addEventListener('change', async () => {
     return;
   }
 
+  // Ältere Backups (vor Schritt 6) haben noch keine Maßnahmen usw.: als leere Liste behandeln
+  RECORD_KINDS.forEach((kind) => { backup[kind] = backup[kind] || []; });
+
   const device = await readAllData();
-  const anesthesias = compare(backup.anesthesias, device.anesthesias);
-  const supplements = compare(backup.supplements, device.supplements);
-  pendingRestore = { backup, device, anesthesias, supplements };
+  // Für jede Art vergleichen: { anesthesias: {added, same, ...}, measures: {...}, ... }
+  const comparison = Object.fromEntries(ALL_KINDS.map(([kind]) => [kind, compare(backup[kind], device[kind])]));
+  pendingRestore = { backup, device, comparison };
 
   restoreSummary.textContent = `Backup vom ${formatDateTime(backup.createdAt)}: `
-    + `${plural(backup.anesthesias.length, 'Narkose', 'Narkosen')}, `
-    + `${plural(backup.supplements.length, 'Nachtrag', 'Nachträge')}. `
-    + `Auf diesem Gerät jetzt: ${plural(device.anesthesias.length, 'Narkose', 'Narkosen')}, `
-    + `${plural(device.supplements.length, 'Nachtrag', 'Nachträge')}.`;
+    + `${describeCounts(countsOf(backup))}. `
+    + `Auf diesem Gerät jetzt: ${describeCounts(countsOf(device))}.`;
 
-  const kept = anesthesias.same + anesthesias.different + supplements.same + supplements.different;
-  restoreMergeText.textContent = `Neu dazu: ${plural(anesthesias.added.length, 'Narkose', 'Narkosen')}, `
-    + `${plural(supplements.added.length, 'Nachtrag', 'Nachträge')}. `
+  const all = Object.values(comparison);
+  const added = Object.fromEntries(ALL_KINDS.map(([kind]) => [kind, comparison[kind].added.length]));
+  const kept = all.reduce((sum, c) => sum + c.same + c.different, 0);
+  const different = all.reduce((sum, c) => sum + c.different, 0);
+  restoreMergeText.textContent = `Neu dazu: ${describeCounts(added)}. `
     + `${kept} schon vorhanden, bleiben unverändert`
-    + (anesthesias.different + supplements.different
-      ? ` (davon ${anesthesias.different + supplements.different} auf dem Gerät inzwischen geändert – deine Gerätefassung bleibt).`
+    + (different
+      ? ` (davon ${different} auf dem Gerät inzwischen geändert – deine Gerätefassung bleibt).`
       : '.')
     + ' Einstellungen des Geräts bleiben.';
 
-  const removed = anesthesias.onlyOnDevice + supplements.onlyOnDevice;
+  const removed = all.reduce((sum, c) => sum + c.onlyOnDevice, 0);
   restoreReplaceText.textContent = 'Das Gerät bekommt genau den Stand des Backups, inklusive Einstellungen. '
     + (removed
       ? `Achtung: ${plural(removed, 'Eintrag, der', 'Einträge, die')} nur auf dem Gerät ${removed === 1 ? 'ist, wird' : 'sind, werden'} gelöscht.`
@@ -221,24 +260,23 @@ restoreCancel.addEventListener('click', closeRestore);
 
 restoreConfirm.addEventListener('click', async () => {
   if (!pendingRestore) return;
-  const { backup, device, anesthesias, supplements } = pendingRestore;
+  const { backup, device, comparison } = pendingRestore;
   const replace = restoreStep.querySelector('input[name="restore-mode"]:checked').value === 'replace';
 
   if (replace) {
-    const question = `Wirklich alles ersetzen? Danach sind auf dem Gerät genau die `
-      + `${backup.anesthesias.length} Narkosen und ${backup.supplements.length} Nachträge aus dem Backup.`;
+    const question = `Wirklich alles ersetzen? Danach sind auf dem Gerät genau die Einträge aus dem Backup: `
+      + `${describeCounts(countsOf(backup))}.`;
     if (!confirm(question)) return;
   }
 
   // Geräte-eigene Einstellungen (letztes Backup) beim Ersetzen behalten.
   const deviceOnly = device.settings.filter((row) => DEVICE_ONLY_SETTINGS.includes(row.key));
-  const data = replace
-    ? {
-      anesthesias: backup.anesthesias,
-      supplements: backup.supplements,
-      settings: [...backup.settings.filter((row) => !DEVICE_ONLY_SETTINGS.includes(row.key)), ...deviceOnly],
-    }
-    : { anesthesias: anesthesias.added, supplements: supplements.added, settings: [] };
+  const data = {};
+  ALL_KINDS.forEach(([kind]) => { data[kind] = replace ? backup[kind] : comparison[kind].added; });
+  data.settings = replace
+    ? [...backup.settings.filter((row) => !DEVICE_ONLY_SETTINGS.includes(row.key)), ...deviceOnly]
+    : [];
+  const addedCounts = Object.fromEntries(ALL_KINDS.map(([kind]) => [kind, comparison[kind].added.length]));
 
   restoreConfirm.disabled = true;
   try {
@@ -254,9 +292,8 @@ restoreConfirm.addEventListener('click', async () => {
   window.dispatchEvent(new Event('entries-changed'));
   renderBackupStatus();
   showMessage(replace
-    ? `Backup wiederhergestellt: ${plural(backup.anesthesias.length, 'Narkose', 'Narkosen')}.`
-    : `${plural(anesthesias.added.length, 'Narkose', 'Narkosen')} und `
-      + `${plural(supplements.added.length, 'Nachtrag', 'Nachträge')} aus dem Backup hinzugefügt.`);
+    ? `Backup wiederhergestellt: ${describeCounts(countsOf(backup))}.`
+    : `Aus dem Backup hinzugefügt: ${describeCounts(addedCounts)}.`);
 });
 
 // ---------- Speicherschutz (Anzeige im Profil) ----------

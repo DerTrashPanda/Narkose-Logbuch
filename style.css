@@ -755,3 +755,29 @@ dialog .field-row .field {
   width: 100%;
   min-height: 48px;
 }
+
+/* ---------- Schritt 6: Umschalter "Narkose / Maßnahme / Intensiv / Notarzt" ---------- */
+
+/* Vier gleich breite Knöpfe nebeneinander, gut mit dem Daumen erreichbar */
+.kind-switch {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.kind-switch .chip span {
+  justify-content: center;
+  width: 100%;
+  padding: 0 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* Warnung in der Übersicht, z. B. zu viel Simulation bei Fiberoptik */
+.progress-warning {
+  margin: 6px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+}

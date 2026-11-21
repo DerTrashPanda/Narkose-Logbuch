@@ -1,12 +1,13 @@
 // export.js – Export als Tabelle (CSV) für Excel, wahlweise nur für einen Zeitraum (z. B. Monatsabschluss).
 //
-// Drei Tabellen:
+// Tabellen:
 //   1) Narkosen: eine Zeile pro Patient, alle Felder – zum Nachschauen und Übertragen ins eLogbuch.
 //   2) Zusammenfassung: Zahl pro WBO-Kategorie im Zeitraum, dazu der Gesamtstand.
-//   3) Nachträge: alle Sammelzahlen.
+//   3) Maßnahmen, Intensiv-Fälle, Notarzteinsätze (Schritt 6): je eine eigene Tabelle.
+//   4) Nachträge: alle Sammelzahlen.
 // Fallnummern gibt es in der App nicht, also stehen auch keine in der Datei.
 
-import { listAnesthesias, listSupplements, getSettings } from './db.js';
+import { listAnesthesias, listSupplements, getSettings, listAllRecords } from './db.js';
 import { COUNTABLE, computeProgress, countProcedures, categoryLabel } from './counting.js';
 import { toCsv } from './csv.js';
 import { handOverFile } from './share.js';
@@ -67,21 +68,28 @@ function inRange(entry, range) {
 
 async function entriesInRange() {
   const range = selectedRange();
-  const all = await listAnesthesias();
+  const [all, allRecords] = await Promise.all([listAnesthesias(), listAllRecords()]);
   // Für die Tabelle älteste zuerst (wie in einem Logbuch).
   const entries = all.filter((e) => inRange(e, range)).reverse();
-  return { range, entries, all };
+  // Maßnahmen, Intensiv, Notarzt: ebenfalls nach Zeitraum gefiltert
+  const records = Object.fromEntries(Object.entries(allRecords)
+    .map(([kind, list]) => [kind, list.filter((r) => inRange(r, range)).reverse()]));
+  return { range, entries, all, records, allRecords };
 }
 
 async function renderRangeInfo() {
   customRange.hidden = rangeChips.querySelector('input:checked').value !== 'custom';
-  const { range, entries } = await entriesInRange();
+  const { range, entries, records } = await entriesInRange();
   if (range.from && range.to && range.from > range.to) {
     rangeInfo.textContent = 'Das „von“-Datum liegt nach dem „bis“-Datum.';
     return;
   }
-  rangeInfo.textContent = `Zeitraum: ${range.label} – ${entries.length} `
-    + `${entries.length === 1 ? 'Narkose' : 'Narkosen'}.`;
+  const parts = [`${entries.length} ${entries.length === 1 ? 'Narkose' : 'Narkosen'}`];
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  if (records.measures.length) parts.push(plural(records.measures.length, 'Maßnahme', 'Maßnahmen'));
+  if (records.icu.length) parts.push(plural(records.icu.length, 'Intensiv-Fall', 'Intensiv-Fälle'));
+  if (records.emergencies.length) parts.push(plural(records.emergencies.length, 'Notarzteinsatz', 'Notarzteinsätze'));
+  rangeInfo.textContent = `Zeitraum: ${range.label} – ${parts.join(', ')}.`;
 }
 
 rangeChips.addEventListener('change', renderRangeInfo);
@@ -117,9 +125,9 @@ function anesthesiaRows(entries, settings) {
   return [header, ...rows];
 }
 
-function summaryRows(range, entries, all, supplements, settings) {
-  const inPeriod = computeProgress(entries, [], settings);
-  const overall = computeProgress(all, supplements, settings);
+function summaryRows(range, entries, all, supplements, settings, records, allRecords) {
+  const inPeriod = computeProgress(entries, [], settings, records);
+  const overall = computeProgress(all, supplements, settings, allRecords);
   const rows = [
     [`Zusammenfassung Narkose-Logbuch – Zeitraum: ${range.label}`],
     [`Erstellt am ${formatDate(isoDay(new Date()))}. Zählregel: `
@@ -139,6 +147,26 @@ function summaryRows(range, entries, all, supplements, settings) {
     ]);
   });
   return rows;
+}
+
+// Schritt 6: Maßnahmen, Intensiv, Notarzt
+function measureRows(measures) {
+  const header = ['Datum', 'Maßnahme', 'Simulation', 'mit Ultraschall', 'Ort', 'Notiz'];
+  return [header, ...measures.map((m) => [
+    formatDate(m.date), m.type, yes(m.simulation), yes(m.ultrasound), m.location, m.note,
+  ])];
+}
+
+function icuRows(cases) {
+  const header = ['Datum', '≥ 2 Organsysteme gestört', 'Beatmung/Weaning', 'Notiz'];
+  return [header, ...cases.map((c) => [formatDate(c.date), yes(c.organs2), yes(c.ventilation), c.note])];
+}
+
+function emergencyRows(emergencies) {
+  const header = ['Datum', 'Rettungsmittel', 'Einsatzart/Stichwort', 'unter Anleitung von', 'Notiz'];
+  return [header, ...emergencies.map((n) => [
+    formatDate(n.date), n.vehicle, n.keyword, n.supervisor, n.note,
+  ])];
 }
 
 function supplementRows(supplements) {
@@ -173,14 +201,32 @@ document.getElementById('export-anesthesias').addEventListener('click', async ()
 });
 
 document.getElementById('export-summary').addEventListener('click', async () => {
-  const [{ range, entries, all }, supplements, settings] = await Promise.all([
+  const [{ range, entries, all, records, allRecords }, supplements, settings] = await Promise.all([
     entriesInRange(), listSupplements(), getSettings(),
   ]);
   const file = csvFile(
-    summaryRows(range, entries, all, supplements, settings),
+    summaryRows(range, entries, all, supplements, settings, records, allRecords),
     `zusammenfassung_${range.fileTag}.csv`,
   );
   handOverFile(file, () => showMessage('Zusammenfassung exportiert.'));
+});
+
+// Die drei Tabellen aus Schritt 6 funktionieren gleich: Knopf, Liste, Zeilen-Bauer, Dateiname.
+[
+  ['export-measures', 'measures', measureRows, 'massnahmen', 'Maßnahmen'],
+  ['export-icu', 'icu', icuRows, 'intensiv', 'Intensiv-Fälle'],
+  ['export-emergencies', 'emergencies', emergencyRows, 'notarzt', 'Notarzteinsätze'],
+].forEach(([buttonId, kind, buildRows, filePrefix, label]) => {
+  document.getElementById(buttonId).addEventListener('click', async () => {
+    const { range, records } = await entriesInRange();
+    const list = records[kind];
+    if (!list.length) {
+      showMessage(`Im gewählten Zeitraum gibt es keine ${label}.`);
+      return;
+    }
+    const file = csvFile(buildRows(list), `${filePrefix}_${range.fileTag}.csv`);
+    handOverFile(file, () => showMessage(`${list.length} ${label} exportiert.`));
+  });
 });
 
 document.getElementById('export-supplements').addEventListener('click', async () => {
