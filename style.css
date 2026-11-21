@@ -651,4 +651,47 @@ dialog .field-row .field {
 
 .danger-text {
   color: var(--danger);
+/* ---------- Schritt 4: Update-Hinweis und App-Infos ---------- */
+
+/* Leiste oben, wenn eine neue Version bereitliegt */
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--chip-on-bg);
+  color: var(--chip-on-text);
+  font-weight: 600;
+}
+
+.update-banner[hidden] {
+  display: none;
+}
+
+.update-banner button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 2px solid currentColor;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.info-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px 14px 14px;
+}
+
+.info-card p {
+  margin: 10px 0;
+}
+
+/* In der installierten App oben Platz für die Statusleiste/Notch lassen */
+.top-bar {
+  padding-top: calc(14px + env(safe-area-inset-top));
 }
